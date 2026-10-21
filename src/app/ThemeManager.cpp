@@ -162,8 +162,8 @@ QString ThemeManager::BuildStyleSheet() const {
   css += QStringLiteral("#canvas { background: %1; }\n")
              .arg(Css(t.canvas_surround));
   css += QStringLiteral(
-             "#command-box { background: %1; border: 1px solid %2;"
-             " border-radius: %3px; }\n")
+             "#command-box, #study-note { background: %1;"
+             " border: 1px solid %2; border-radius: %3px; }\n")
              .arg(Css(t.raised), Css(t.separator))
              .arg(t.radius_popup);
   css += QStringLiteral(
@@ -206,10 +206,18 @@ QString ThemeManager::BuildStyleSheet() const {
              " border-radius: %3px; padding: 6px 12px; }\n"
              "QPushButton:hover { background: %4; }\n"
              "QPushButton:pressed { background: %5; }\n"
-             "QPushButton:disabled { color: %6; }\n")
+             "QPushButton:disabled { color: %6; }\n"
+             "QPushButton:checked { background: %7; }\n")
              .arg(Css(t.raised), Css(t.text))
              .arg(t.radius_control)
-             .arg(Css(t.hover), Css(t.pressed), Css(t.text_disabled));
+             .arg(Css(t.hover), Css(t.pressed), Css(t.text_disabled),
+                  Css(t.accent_pill));
+  css += QStringLiteral(
+             "QLabel#secondary { color: %1; font-size: %2px; }\n"
+             "QLabel#recording { color: %3; padding: 0 8px; }\n")
+             .arg(Css(t.text_secondary))
+             .arg(t.font_small)
+             .arg(Css(t.error));
   css += QStringLiteral(
              "QScrollBar { background: transparent; width: 10px;"
              " height: 10px; }\n"

@@ -63,6 +63,8 @@ class MainWindow {
 
   // A line in the status bar naming the next step. Empty clears it.
   void ShowHint(const QString& text);
+  // A lasting mark in the status bar while a study session records.
+  void ShowRecording(bool recording);
 
  private:
   void CreatePanels();
@@ -71,6 +73,7 @@ class MainWindow {
 
   std::unique_ptr<KDDockWidgets::QtWidgets::MainWindow> window_;
   std::array<KDDockWidgets::QtWidgets::DockWidget*, kPanelCount> panels_{};
+  QWidget* recording_mark_ = nullptr;
 };
 
 }  // namespace snapper

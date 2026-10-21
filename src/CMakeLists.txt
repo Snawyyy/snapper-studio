@@ -5,6 +5,7 @@ target_sources(snapper_core PRIVATE
   app/Startup.cpp app/Startup.h
   app/Studio.cpp app/Studio.h
   app/Theme.h
+  app/StudyManager.cpp app/StudyManager.h
   app/ThemeManager.cpp app/ThemeManager.h
   app/ZipArchive.cpp app/ZipArchive.h
   document/Document.cpp document/Document.h
@@ -39,5 +40,6 @@ target_sources(snapper_core PRIVATE
   ui/NumberField.cpp ui/NumberField.h
   ui/PenOptions.cpp ui/PenOptions.h
   ui/ShapeOptions.cpp ui/ShapeOptions.h
+  ui/StudyNoteBox.cpp ui/StudyNoteBox.h
   ui/ToolOptionsPanel.cpp ui/ToolOptionsPanel.h
 )

@@ -15,6 +15,8 @@ class MainWindow;
 class ProjectIo;
 class SelectionManager;
 class SettingsManager;
+class StudyManager;
+class StudyNoteBox;
 class ThemeManager;
 class ToolManager;
 class UndoManager;
@@ -42,6 +44,7 @@ class Studio {
   void RegisterAppCommands();
   void CreateTools();
   void CreatePanels();
+  void CreateStudy();
   void RestoreSession();
   void SaveSession();
   // Asks about unsaved work. False keeps the window open.
@@ -57,10 +60,12 @@ class Studio {
   std::unique_ptr<ToolManager> tools_;
   std::unique_ptr<LayerActions> layer_actions_;
   std::unique_ptr<ProjectIo> project_;
+  std::unique_ptr<StudyManager> study_;
   std::unique_ptr<MainWindow> window_;
   // Both owned by the window.
   CanvasView* canvas_ = nullptr;
   CommandBox* command_box_ = nullptr;
+  StudyNoteBox* note_box_ = nullptr;
 };
 
 }  // namespace snapper

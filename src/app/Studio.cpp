@@ -8,6 +8,7 @@
 #include "app/CommandRegistry.h"
 #include "app/ProjectIo.h"
 #include "app/SettingsManager.h"
+#include "app/StudyManager.h"
 #include "app/ThemeManager.h"
 #include "document/Document.h"
 #include "edit/LayerActions.h"
@@ -23,6 +24,7 @@
 #include "ui/MainWindow.h"
 #include "ui/PenOptions.h"
 #include "ui/ShapeOptions.h"
+#include "ui/StudyNoteBox.h"
 #include "ui/ToolOptionsPanel.h"
 
 namespace snapper {
@@ -91,6 +93,7 @@ Studio::Studio()
   QObject::connect(project_.get(), &ProjectIo::TitleChanged, window_->Widget(),
                    [this] { UpdateTitle(); });
   UpdateTitle();
+  CreateStudy();
   window_->Widget()->installEventFilter(
       new CloseWatcher([this] { return AllowClose(); }, window_->Widget()));
 }
@@ -183,6 +186,32 @@ void Studio::CreatePanels() {
   history->setObjectName(QStringLiteral("history"));
   history->setEmptyLabel(QStringLiteral("New project"));
   window_->SetPanelContent(MainWindow::kHistory, history);
+}
+
+void Studio::CreateStudy() {
+  study_ =
+      std::make_unique<StudyManager>(window_->Widget(), *commands_, *undo_);
+  study_->RegisterCommands(*commands_);
+  note_box_ = new StudyNoteBox(*study_, window_->Widget());
+  QObject::connect(study_.get(), &StudyManager::Hint, window_->Widget(),
+                   [this](const QString& text) { window_->ShowHint(text); });
+  QObject::connect(
+      study_.get(), &StudyManager::RecordingChanged, window_->Widget(),
+      [this](bool recording) { window_->ShowRecording(recording); });
+  commands_->Add({
+      .id = QStringLiteral("study.note"),
+      .title = QStringLiteral("Add Study Note"),
+      .shortcut = QKeySequence(Qt::CTRL | Qt::ALT | Qt::Key_N),
+      .run =
+          [this] {
+            if (study_->IsRecording()) {
+              note_box_->Open();
+            } else {
+              window_->ShowHint(QStringLiteral(
+                  "Add Study Note: start a study recording first"));
+            }
+          },
+  });
 }
 
 void Studio::RegisterAppCommands() {

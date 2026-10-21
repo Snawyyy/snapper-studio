@@ -4,6 +4,7 @@
 #include <kddockwidgets/qtwidgets/views/DockWidget.h>
 #include <kddockwidgets/qtwidgets/views/MainWindow.h>
 
+#include <QLabel>
 #include <QStatusBar>
 #include <QVBoxLayout>
 #include <QWidget>
@@ -50,6 +51,11 @@ MainWindow::MainWindow(QWidget* canvas)
   CreatePanels();
   ArrangeDefaultLayout();
   window_->statusBar()->setSizeGripEnabled(false);
+  auto* mark = new QLabel(QStringLiteral("Recording study"));
+  mark->setObjectName(QStringLiteral("recording"));
+  window_->statusBar()->addPermanentWidget(mark);
+  mark->hide();
+  recording_mark_ = mark;
 }
 
 MainWindow::~MainWindow() = default;
@@ -88,6 +94,10 @@ void MainWindow::SetPanelContent(Panel panel, QWidget* content) {
 
 void MainWindow::ShowHint(const QString& text) {
   window_->statusBar()->showMessage(text);
+}
+
+void MainWindow::ShowRecording(bool recording) {
+  recording_mark_->setVisible(recording);
 }
 
 QByteArray MainWindow::SaveLayout() const {

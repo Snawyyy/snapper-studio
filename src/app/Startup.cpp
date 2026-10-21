@@ -1,5 +1,6 @@
 #include "app/Startup.h"
 
+#include <kddockwidgets/Config.h>
 #include <kddockwidgets/KDDockWidgets.h>
 
 #include <QApplication>
@@ -23,6 +24,11 @@ void SetUpApplication(QApplication& app) {
   }
 
   KDDockWidgets::initFrontend(KDDockWidgets::FrontendType::QtWidgets);
+
+  // A panel's close button closes only the tab showing, not its neighbors.
+  KDDockWidgets::Config& docks = KDDockWidgets::Config::self();
+  docks.setFlags(docks.flags() |
+                 KDDockWidgets::Config::Flag_CloseOnlyCurrentTab);
 }
 
 }  // namespace snapper

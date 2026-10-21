@@ -162,7 +162,7 @@ QString ThemeManager::BuildStyleSheet() const {
   css += QStringLiteral("#canvas { background: %1; }\n")
              .arg(Css(t.canvas_surround));
   css += QStringLiteral(
-             "#command-box, #study-note { background: %1;"
+             "#command-box, #study-note, #color-popover { background: %1;"
              " border: 1px solid %2; border-radius: %3px; }\n")
              .arg(Css(t.raised), Css(t.separator))
              .arg(t.radius_popup);

@@ -52,6 +52,23 @@ class StyleCommandsTest : public QObject {
     QCOMPARE(*document.Styles().Find(original.id), original);
   }
 
+  // Dragging away and back again leaves no step.
+  void DragBackToTheStartLeavesNoStep() {
+    Document document;
+    document.ResetToNew();
+    UndoManager undo;
+    const Style original = document.Styles().All().front();
+    const int tag = snapper::MovePointsCommand::NewDragTag();
+    Style edited = original;
+    edited.look.line = Qt::red;
+    undo.Push(std::make_unique<snapper::SetStyleCommand>(document, original,
+                                                         edited, tag));
+    undo.Push(std::make_unique<snapper::SetStyleCommand>(document, edited,
+                                                         original, tag));
+    QCOMPARE(undo.Stack()->count(), 0);
+    QCOMPARE(*document.Styles().Find(original.id), original);
+  }
+
   void DeletingAStyleFreesItsShapes() {
     Document document;
     document.ResetToNew();

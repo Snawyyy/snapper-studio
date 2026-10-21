@@ -42,6 +42,8 @@ class ReplaceValueCommand : public QUndoCommand {
       return false;
     }
     after_ = next->after_;
+    // A drag that ends where it began leaves no step behind.
+    setObsolete(after_ == before_);
     return true;
   }
 

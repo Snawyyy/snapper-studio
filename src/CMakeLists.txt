@@ -43,6 +43,8 @@ target_sources(snapper_core PRIVATE
   render/ShapeGeometry.cpp render/ShapeGeometry.h
   render/ViewTransform.cpp render/ViewTransform.h
   ui/CanvasView.cpp ui/CanvasView.h
+  ui/ColorPopover.cpp ui/ColorPopover.h
+  ui/ColorSwatch.cpp ui/ColorSwatch.h
   ui/CommandBox.cpp ui/CommandBox.h
   ui/LayerRowDelegate.cpp ui/LayerRowDelegate.h
   ui/LayersPanel.cpp ui/LayersPanel.h

@@ -12,7 +12,6 @@
 #include "document/Document.h"
 #include "edit/SelectionManager.h"
 #include "edit/ToolManager.h"
-#include "render/Renderer.h"
 
 namespace snapper {
 
@@ -24,6 +23,8 @@ constexpr double kZoomStep = 1.25;
 constexpr int kOffPageCoverAlpha = 170;
 constexpr int kShadowLayers = 4;
 constexpr int kShadowAlpha = 18;
+// How long the view must rest before slow art is drawn sharp again.
+constexpr int kViewSettleMs = 120;
 
 }  // namespace
 
@@ -39,15 +40,27 @@ CanvasView::CanvasView(Document& document, SelectionManager& selection,
   setAttribute(Qt::WA_OpaquePaintEvent);
   setAttribute(Qt::WA_AcceptTouchEvents);
 
-  const auto repaint = [this] { update(); };
-  connect(&document_.Layers(), &LayerManager::ListChanged, this, repaint);
-  connect(&document_.Layers(), &LayerManager::LayerChanged, this, repaint);
+  view_settle_.setSingleShot(true);
+  view_settle_.setInterval(kViewSettleMs);
+  connect(&view_settle_, &QTimer::timeout, this, [this] { update(); });
+
+  const auto art_changed = [this] { ArtChanged(); };
+  connect(&document_.Layers(), &LayerManager::ListChanged, this, art_changed);
+  connect(&document_.Layers(), &LayerManager::LayerChanged, this, art_changed);
   connect(&document_.Shapes(), &ShapeManager::LayerContentChanged, this,
-          repaint);
-  connect(&document_, &Document::CanvasChanged, this, repaint);
+          art_changed);
+  connect(&document_.Styles(), &StyleManager::ListChanged, this, art_changed);
+  connect(&document_.Styles(), &StyleManager::StyleChanged, this, art_changed);
+  connect(&document_.Brushes(), &BrushManager::ListChanged, this, art_changed);
+  connect(&document_.Brushes(), &BrushManager::BrushChanged, this, art_changed);
+  connect(&document_, &Document::CanvasChanged, this, art_changed);
+  const auto repaint = [this] { update(); };
   connect(&selection_, &SelectionManager::PointsChanged, this, repaint);
   connect(&selection_, &SelectionManager::ActiveLayerChanged, this, repaint);
-  connect(&document_, &Document::Reset, this, [this] { FitCanvas(); });
+  connect(&document_, &Document::Reset, this, [this] {
+    art_.Invalidate();
+    FitCanvas();
+  });
 }
 
 void CanvasView::RegisterCommands(CommandRegistry& commands) {
@@ -127,11 +140,8 @@ void CanvasView::paintEvent(QPaintEvent* /*event*/) {
   QPainter painter(this);
   painter.fillRect(rect(), theme_.canvas_surround);
   painter.setRenderHint(QPainter::Antialiasing);
-
-  painter.setTransform(view_.ToScreenMatrix());
-  Renderer::DrawPage(painter, document_);
-  Renderer::DrawLayers(painter, document_);
-  painter.resetTransform();
+  art_.Draw(painter, document_, view_.ToScreenMatrix(), size(),
+            devicePixelRatioF(), view_settle_.isActive());
   DrawSurround(painter);
   if (tools_ != nullptr) {
     painter.setClipping(false);
@@ -190,6 +200,12 @@ void CanvasView::wheelEvent(QWheelEvent* event) {
 
 void CanvasView::ViewMoved() {
   is_fit_view_ = false;
+  view_settle_.start();
+  update();
+}
+
+void CanvasView::ArtChanged() {
+  art_.Invalidate();
   update();
 }
 
@@ -231,7 +247,7 @@ void CanvasView::mouseMoveEvent(QMouseEvent* event) {
   const QPointF pos = event->position();
   if (navigator_.IsDragging()) {
     navigator_.DragTo(pos, rect().toRectF());
-    update();
+    ViewMoved();
     return;
   }
   if (tools_ == nullptr) {

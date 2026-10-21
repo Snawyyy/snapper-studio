@@ -1,8 +1,10 @@
 #pragma once
 
+#include <QTimer>
 #include <QWidget>
 
 #include "app/Theme.h"
+#include "render/ArtCache.h"
 #include "render/ViewTransform.h"
 #include "ui/ViewNavigator.h"
 
@@ -55,6 +57,8 @@ class CanvasView : public QWidget {
   void UpdateCursor();
   // The user moved the view, so resizing no longer refits it.
   void ViewMoved();
+  // The artwork changed and must be drawn again.
+  void ArtChanged();
   ToolInput MakeInput(const QPointF& screen, float pressure,
                       Qt::KeyboardModifiers modifiers) const;
   bool StartViewDrag(Qt::MouseButton button, Qt::KeyboardModifiers modifiers,
@@ -70,6 +74,9 @@ class CanvasView : public QWidget {
   bool is_fit_view_ = false;
   ToolManager* tools_ = nullptr;
   bool is_tool_pressed_ = false;
+  ArtCache art_;
+  // Runs while the view moves, and draws the art sharp again when it stops.
+  QTimer view_settle_;
 };
 
 }  // namespace snapper

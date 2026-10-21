@@ -119,7 +119,7 @@ class Driver : public QObject {
   void RunNext() {
     const bool is_done = next_ >= steps_.size();
     if (is_done) {
-      QApplication::quit();
+      Quit();
       return;
     }
     const Step& step = steps_[next_++];
@@ -158,13 +158,20 @@ class Driver : public QObject {
     } else if (action == u"windows") {
       PrintWindows();
     } else if (action == u"quit") {
-      QApplication::quit();
+      Quit();
       return;
     } else {
       Fail(step, "unknown action or bad arguments");
       return;
     }
     Schedule(delay_ms);
+  }
+
+  // Closes the main window like a user would, so the layout gets saved,
+  // then makes sure the app stops.
+  void Quit() {
+    window_->close();
+    QApplication::quit();
   }
 
   void Drag(QPoint from, QPoint to) {

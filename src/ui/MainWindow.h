@@ -1,5 +1,7 @@
 #pragma once
 
+#include <QByteArray>
+
 #include <array>
 #include <memory>
 
@@ -34,8 +36,14 @@ class MainWindow {
   void Show();
 
   // Adds a "Show <panel>" command per panel, which opens it if closed and
-  // brings it to the front.
+  // brings it to the front, plus "Reset Panel Layout".
   void RegisterCommands(CommandRegistry& commands);
+
+  // Panel positions, sizes, tabs and floating windows. Restoring returns
+  // false when the data can't be read.
+  QByteArray SaveLayout() const;
+  bool RestoreLayout(const QByteArray& layout);
+  void ResetLayout();
 
  private:
   enum Panel {

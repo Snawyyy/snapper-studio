@@ -1,5 +1,6 @@
 #include "ui/MainWindow.h"
 
+#include <kddockwidgets/LayoutSaver.h>
 #include <kddockwidgets/qtwidgets/views/DockWidget.h>
 #include <kddockwidgets/qtwidgets/views/MainWindow.h>
 
@@ -66,6 +67,32 @@ void MainWindow::RegisterCommands(CommandRegistry& commands) {
         .run = [this, i] { ShowPanel(i); },
     });
   }
+  commands.Add({
+      .id = QStringLiteral("panel.reset-layout"),
+      .title = QStringLiteral("Reset Panel Layout"),
+      .shortcut = {},
+      .run = [this] { ResetLayout(); },
+  });
+}
+
+QByteArray MainWindow::SaveLayout() const {
+  KDDockWidgets::LayoutSaver saver;
+  return saver.serializeLayout();
+}
+
+bool MainWindow::RestoreLayout(const QByteArray& layout) {
+  KDDockWidgets::LayoutSaver saver(
+      KDDockWidgets::RestoreOption_RelativeToMainWindow);
+  return saver.restoreLayout(layout);
+}
+
+// Lays the panels out from scratch, so the default sizes fit the window as
+// it is now.
+void MainWindow::ResetLayout() {
+  for (KDDockWidgets::QtWidgets::DockWidget* dock : panels_) {
+    dock->close();
+  }
+  ArrangeDefaultLayout();
 }
 
 void MainWindow::ShowPanel(int panel) {

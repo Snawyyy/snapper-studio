@@ -34,6 +34,7 @@ target_sources(snapper_core PRIVATE
   edit/LayerActions.cpp edit/LayerActions.h
   edit/LayerCommands.cpp edit/LayerCommands.h
   edit/ShapeCommands.cpp edit/ShapeCommands.h
+  edit/StyleCommands.cpp edit/StyleCommands.h
   edit/UndoManager.cpp edit/UndoManager.h
   render/Renderer.cpp render/Renderer.h
   render/ShapeGeometry.cpp render/ShapeGeometry.h

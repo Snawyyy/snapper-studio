@@ -91,23 +91,29 @@ std::optional<LoadedProject> ProjectIo::ReadArchive(const QString& path,
     return std::nullopt;
   }
   // Pictures sit beside project.json. A missing one leaves its layer
-  // empty.
-  for (const Layer& layer : loaded->contents.layers) {
-    const bool needs_picture = layer.type == LayerType::kImage &&
-                               !layer.image.isEmpty() &&
-                               !loaded->contents.images.contains(layer.image);
+  // empty, or its brush drawing plain lines.
+  const auto read_picture = [&](const QString& name, const QString& owner) {
+    const bool needs_picture =
+        !name.isEmpty() && !loaded->contents.images.contains(name);
     if (!needs_picture) {
-      continue;
+      return;
     }
     QString picture_error;
-    const std::optional<QByteArray> bytes =
-        zip.Read(layer.image, &picture_error);
+    const std::optional<QByteArray> bytes = zip.Read(name, &picture_error);
     if (bytes.has_value()) {
-      loaded->contents.images.insert(layer.image, *bytes);
+      loaded->contents.images.insert(name, *bytes);
     } else {
       loaded->warnings.append(
-          QStringLiteral("The picture for %1 is missing").arg(layer.name));
+          QStringLiteral("The picture for %1 is missing").arg(owner));
     }
+  };
+  for (const Layer& layer : loaded->contents.layers) {
+    if (layer.type == LayerType::kImage) {
+      read_picture(layer.image, layer.name);
+    }
+  }
+  for (const Brush& brush : loaded->contents.brushes) {
+    read_picture(brush.image, QStringLiteral("brush %1").arg(brush.name));
   }
   return loaded;
 }

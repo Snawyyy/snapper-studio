@@ -13,6 +13,8 @@ target_sources(snapper_core PRIVATE
   document/Ids.h
   document/ProjectJson.cpp document/ProjectJson.h
   document/ImageStore.cpp document/ImageStore.h
+  document/JsonWarnings.h
+  document/LookJson.cpp document/LookJson.h
   document/LayerManager.cpp document/LayerManager.h
   document/ShapeLook.h
   document/StandardBrushes.cpp document/StandardBrushes.h

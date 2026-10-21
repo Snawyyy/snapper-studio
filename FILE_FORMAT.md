@@ -8,9 +8,9 @@ A project is one file, `name.snapper`. Inside it is a zip archive
 ```
 project.json        the whole document
 history.json        undo history, optional, may be dropped if too big
-assets/images/      imported pictures, by content hash: <sha1>.png
+assets/images/      imported pictures and brush pictures, by content
+                    hash: <sha1>.png
 assets/audio/       audio tracks, by content hash
-assets/brushes/     brush images used by the project's styles
 thumbnail.png       frame 0, 512 px wide, for file browsers
 ```
 
@@ -26,21 +26,23 @@ that is unique in the project. Links between objects use ids.
 ```json
 {
   "format": "snapper",
-  "version": 1,
+  "version": 2,
   "app_version": "0.1.0",
   "canvas": { "width": 1920, "height": 1080, "fps": 24,
               "frames": 240, "background": "#FFFFFF" },
   "next_id": 1043,
   "styles":   [ { "id": 5, "name": "Skin", "fill": "#F2C9A0",
                   "line": "#3A2A20", "width": 3.0, "brush": 7 } ],
-  "brushes":  [ { "id": 7, "name": "Pencil", "image": "assets/brushes/<sha1>.png",
-                  "spacing": 0.05, "align": true, "angle_jitter": 10,
-                  "spacing_jitter": 0.1, "boil_every": 0 } ],
+  "brushes":  [ { "id": 7, "name": "Pencil", "image": "assets/images/<sha1>.png",
+                  "spacing": 0.2, "align": false, "angle_jitter": 180,
+                  "spacing_jitter": 0.0, "size_jitter": 0.1,
+                  "boil_every": 2 } ],
   "layers":   [ { "id": 10, "parent": 0, "type": "bone", "name": "Body",
                   "visible": true, "locked": false } ],
   "shapes":   [ { "id": 200, "layer": 11, "points": [201, 202, 203],
                   "closed": true, "styles": [5],
-                  "fill": "#FFF2C9A0", "line": null, "line_width": 3.0 } ],
+                  "fill": "#FFF2C9A0", "line": null, "line_width": 3.0,
+                  "brush": 7 } ],
   "points":   [ { "id": 201, "x": 10.0, "y": 4.5, "curve": 0.33,
                   "width": 1.0 } ],
   "bones":    [ { "id": 300, "layer": 10, "parent": 0, "name": "upper_arm",
@@ -58,8 +60,21 @@ that is unique in the project. Links between objects use ids.
 A shape's own `fill` and `line` are colors, or null for none, and
 `line_width` is its full line width. A point's `curve` runs from 0 (a
 sharp corner) to about 0.55 (round), and its `width` scales the line
-width there, from pen pressure. Until styles arrive in M2, shapes carry
-only their own look and no `styles`.
+width there, from pen pressure. A shape's own `brush` is left out for a
+plain line.
+
+A shape names up to two `styles`, written [first] or [0, second] when
+only the second is set. Each style holds only the parts it sets, out of
+`fill`, `line` (colors, or null for none), `width` and `brush` (0 for a
+plain line). A shape draws with its own look, then each part its first
+style sets, then each part its second style sets.
+
+A brush stamps its picture along a line: the picture's alpha is how much
+paint each spot lays down, tinted by the line color. `spacing` is the gap
+between stamps as a share of the line width, `align` turns them along the
+line, `angle_jitter` is in degrees either way, `spacing_jitter` and
+`size_jitter` are shares, and `boil_every` is the number of frames
+between new random stamps (0 never).
 
 Lists are flat. Trees (layers, bones) use `parent` ids, and parents are
 written before children, so loading needs one forward pass. `parent: 0`
@@ -67,7 +82,9 @@ means top level.
 
 ## Rules
 
-- **Versioned.** `version` goes up whenever the format changes. The app
+- **Versioned.** `version` goes up whenever the format changes.
+  Version 2 added styles and brushes: a version 1 project opens with the
+  default style and the standard brushes added. The app
   opens every older version by upgrading it step by step (1 to 2 to 3),
   one small function per step. A newer version than the app knows opens
   read-only, with a message.

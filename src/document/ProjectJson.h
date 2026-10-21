@@ -21,8 +21,8 @@ struct LoadedProject {
 // with a warning, and the project still opens.
 class ProjectJson {
  public:
-  static constexpr int kVersion = 1;
-  static constexpr int kMaxWarnings = 20;
+  // 2 added styles and brushes.
+  static constexpr int kVersion = 2;
 
   static QByteArray Write(const DocumentContents& contents);
 

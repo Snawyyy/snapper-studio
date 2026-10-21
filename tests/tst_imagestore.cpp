@@ -75,7 +75,8 @@ class ImageStoreTest : public QObject {
     const snapper::LoadedProject loaded =
         snapper::ProjectIo::ReadArchive(path, &error)
             .value_or(snapper::LoadedProject{});
-    QCOMPARE(loaded.contents.images.size(), 1);
+    // The layer's picture and one per brush.
+    QCOMPARE(loaded.contents.images.size(), 1 + document.Brushes().Count());
     snapper::Document reopened;
     QCOMPARE(reopened.Replace(loaded.contents), 0);
     const snapper::Layer* back = reopened.Layers().Find(layer.id);

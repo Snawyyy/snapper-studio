@@ -33,8 +33,20 @@ DocumentContents Sample() {
                             .curve = 0.0F,
                             .width = 0.5F});
   }
+  const snapper::Brush& chalk = document.Brushes().All()[2];
+  shape.look.brush = chalk.id;
+  shape.styles = {document.Styles().All().front().id, snapper::kNoId};
   document.Shapes().Insert(shape, 0);
   document.Layers().SetLocked(layer, true);
+  snapper::Style skin{.id = document.NewId(), .name = QStringLiteral("Skin")};
+  skin.parts.fill = true;
+  skin.parts.width = true;
+  skin.parts.brush = true;
+  skin.look.has_fill = true;
+  skin.look.fill = QColor(200, 150, 120);
+  skin.look.line_width = 7.0F;
+  skin.look.brush = chalk.id;
+  document.Styles().Insert(skin, 1);
   return document.Contents();
 }
 
@@ -73,6 +85,53 @@ class ProjectIoTest : public QObject {
     QCOMPARE(shape.points[2].pos, QPointF(21, 2));
     QCOMPARE(shape.points[2].width, 0.5F);
     QCOMPARE(shape.points[2].curve, 0.0F);
+
+    QCOMPARE(back.styles, saved.styles);
+    QCOMPARE(back.brushes, saved.brushes);
+    QCOMPARE(shape.styles, saved.shapes[0].styles);
+    QCOMPARE(shape.look.brush, saved.shapes[0].look.brush);
+    for (const snapper::Brush& brush : back.brushes) {
+      QVERIFY(back.images.contains(brush.image));
+    }
+  }
+
+  void MissingStyleLinksAreDroppedWithAWarning() {
+    QJsonObject root = Parse(ProjectJson::Write(Sample()));
+    root[QStringLiteral("styles")] = QJsonArray{};
+    QString error;
+    const LoadedProject loaded =
+        ProjectJson::Read(QJsonDocument(root).toJson(), &error)
+            .value_or(LoadedProject{});
+    QCOMPARE(loaded.contents.shapes.size(), size_t{1});
+    QCOMPARE(loaded.contents.shapes[0].styles,
+             (snapper::StylePair{snapper::kNoId, snapper::kNoId}));
+    QCOMPARE(loaded.warnings.size(), 1);
+  }
+
+  // A project from before styles gets the default style and brushes.
+  void Version1GetsStylesAndBrushes() {
+    QJsonObject root = Parse(ProjectJson::Write(Sample()));
+    root[QStringLiteral("version")] = 1;
+    root.remove(QStringLiteral("styles"));
+    root.remove(QStringLiteral("brushes"));
+    QJsonArray shapes = root.value(QStringLiteral("shapes")).toArray();
+    QJsonObject shape = shapes[0].toObject();
+    shape.remove(QStringLiteral("styles"));
+    shape.remove(QStringLiteral("brush"));
+    shapes[0] = shape;
+    root[QStringLiteral("shapes")] = shapes;
+    QString error;
+    const LoadedProject loaded =
+        ProjectJson::Read(QJsonDocument(root).toJson(), &error)
+            .value_or(LoadedProject{});
+    QVERIFY(loaded.warnings.isEmpty());
+    const DocumentContents& back = loaded.contents;
+    QCOMPARE(back.styles.size(), size_t{1});
+    QVERIFY(!back.brushes.empty());
+    QCOMPARE(back.images.size(), static_cast<qsizetype>(back.brushes.size()));
+    QVERIFY(back.next_id > back.brushes.back().id);
+    snapper::Document document;
+    QCOMPARE(document.Replace(back), 0);
   }
 
   void BrokenLinksAreDroppedWithAWarning() {

@@ -36,6 +36,8 @@ class ImageStore {
   const QHash<QString, Image>& All() const { return images_; }
 
   static bool IsSafeName(const QString& name);
+  // The name a picture with these bytes gets inside the project.
+  static QString NameFor(const QByteArray& bytes);
 
  private:
   static std::optional<Image> Decode(const QByteArray& bytes, QString* error);

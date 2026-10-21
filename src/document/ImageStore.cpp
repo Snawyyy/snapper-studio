@@ -38,17 +38,21 @@ std::optional<ImageStore::Image> ImageStore::Decode(const QByteArray& bytes,
   return image;
 }
 
-std::optional<QString> ImageStore::Add(const QByteArray& bytes,
-                                       QString* error) {
+QString ImageStore::NameFor(const QByteArray& bytes) {
   QBuffer buffer;
   buffer.setData(bytes);
   buffer.open(QIODevice::ReadOnly);
   const QByteArray format = QImageReader::imageFormat(&buffer);
   const QString hash = QString::fromLatin1(
       QCryptographicHash::hash(bytes, QCryptographicHash::Sha1).toHex());
-  QString name =
-      kFolder + hash + u'.' +
-      (format.isEmpty() ? QStringLiteral("img") : QString::fromLatin1(format));
+  return kFolder + hash + u'.' +
+         (format.isEmpty() ? QStringLiteral("img")
+                           : QString::fromLatin1(format));
+}
+
+std::optional<QString> ImageStore::Add(const QByteArray& bytes,
+                                       QString* error) {
+  QString name = NameFor(bytes);
   if (images_.contains(name)) {
     return name;
   }

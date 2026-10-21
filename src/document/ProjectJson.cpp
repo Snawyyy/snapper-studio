@@ -8,6 +8,10 @@
 
 #include <algorithm>
 
+#include "document/JsonWarnings.h"
+#include "document/LookJson.h"
+#include "document/StandardBrushes.h"
+
 namespace snapper {
 
 namespace {
@@ -53,17 +57,27 @@ QJsonObject WriteShape(const Shape& shape) {
     points.append(point.id);
   }
   const ShapeLook& look = shape.look;
-  return {{QStringLiteral("id"), shape.id},
-          {QStringLiteral("layer"), shape.layer},
-          {QStringLiteral("points"), points},
-          {QStringLiteral("closed"), shape.closed},
-          {QStringLiteral("fill"),
-           look.has_fill ? QJsonValue(look.fill.name(QColor::HexArgb))
-                         : QJsonValue()},
-          {QStringLiteral("line"),
-           look.has_line ? QJsonValue(look.line.name(QColor::HexArgb))
-                         : QJsonValue()},
-          {QStringLiteral("line_width"), look.line_width}};
+  QJsonObject json{
+      {QStringLiteral("id"), shape.id},
+      {QStringLiteral("layer"), shape.layer},
+      {QStringLiteral("points"), points},
+      {QStringLiteral("closed"), shape.closed},
+      {QStringLiteral("fill"), LookJson::WriteColor(look.has_fill, look.fill)},
+      {QStringLiteral("line"), LookJson::WriteColor(look.has_line, look.line)},
+      {QStringLiteral("line_width"), look.line_width}};
+  if (look.brush != kNoId) {
+    json.insert(QStringLiteral("brush"), look.brush);
+  }
+  // Trailing empty slots are left out: [5] or [0, 5].
+  const bool has_second = shape.styles[1] != kNoId;
+  const bool has_first = shape.styles[0] != kNoId;
+  if (has_second) {
+    json.insert(QStringLiteral("styles"),
+                QJsonArray{shape.styles[0], shape.styles[1]});
+  } else if (has_first) {
+    json.insert(QStringLiteral("styles"), QJsonArray{shape.styles[0]});
+  }
+  return json;
 }
 
 QJsonObject WritePoint(const Point& point) {
@@ -73,29 +87,6 @@ QJsonObject WritePoint(const Point& point) {
           {QStringLiteral("curve"), point.curve},
           {QStringLiteral("width"), point.width}};
 }
-
-// Collects warnings, keeping only the first few so a badly broken file
-// can't flood the message.
-class Warnings {
- public:
-  void Add(const QString& text) {
-    ++count_;
-    if (list_.size() < ProjectJson::kMaxWarnings) {
-      list_.append(text);
-    }
-  }
-  QStringList Take() {
-    const int hidden = count_ - static_cast<int>(list_.size());
-    if (hidden > 0) {
-      list_.append(QStringLiteral("and %1 more").arg(hidden));
-    }
-    return std::move(list_);
-  }
-
- private:
-  QStringList list_;
-  int count_ = 0;
-};
 
 CanvasSettings ReadCanvas(const QJsonObject& json) {
   const CanvasSettings defaults;
@@ -118,10 +109,17 @@ CanvasSettings ReadCanvas(const QJsonObject& json) {
   return canvas;
 }
 
-// Reads a color, or nothing for null or a bad value.
-std::optional<QColor> ReadColor(const QJsonValue& value) {
-  const QColor color = QColor::fromString(value.toString());
-  return color.isValid() ? std::optional<QColor>(color) : std::nullopt;
+// Version 1 had no styles or brushes. Projects from it get the ones a new
+// project starts with, under fresh ids.
+void UpgradeFrom1(DocumentContents& contents) {
+  contents.styles.push_back(Document::DefaultStyle(contents.next_id++));
+  for (const StandardBrush& standard : StandardBrushes()) {
+    Brush brush = standard.brush;
+    brush.id = contents.next_id++;
+    brush.image = ImageStore::NameFor(standard.png);
+    contents.images.insert(brush.image, standard.png);
+    contents.brushes.push_back(brush);
+  }
 }
 
 }  // namespace
@@ -130,6 +128,14 @@ QByteArray ProjectJson::Write(const DocumentContents& contents) {
   QJsonArray layers;
   for (const Layer& layer : contents.layers) {
     layers.append(WriteLayer(layer));
+  }
+  QJsonArray styles;
+  for (const Style& style : contents.styles) {
+    styles.append(LookJson::WriteStyle(style));
+  }
+  QJsonArray brushes;
+  for (const Brush& brush : contents.brushes) {
+    brushes.append(LookJson::WriteBrush(brush));
   }
   QJsonArray shapes;
   QJsonArray points;
@@ -145,6 +151,8 @@ QByteArray ProjectJson::Write(const DocumentContents& contents) {
       {QStringLiteral("app_version"), QStringLiteral(SNAPPER_VERSION)},
       {QStringLiteral("canvas"), WriteCanvas(contents.canvas)},
       {QStringLiteral("next_id"), contents.next_id},
+      {QStringLiteral("styles"), styles},
+      {QStringLiteral("brushes"), brushes},
       {QStringLiteral("layers"), layers},
       {QStringLiteral("shapes"), shapes},
       {QStringLiteral("points"), points},
@@ -184,7 +192,7 @@ std::optional<LoadedProject> ProjectJson::Read(const QByteArray& json,
     return std::nullopt;
   }
 
-  Warnings warnings;
+  JsonWarnings warnings;
   LoadedProject loaded;
   DocumentContents& out = loaded.contents;
   out.canvas = ReadCanvas(root.value(QStringLiteral("canvas")).toObject());
@@ -231,6 +239,40 @@ std::optional<LoadedProject> ProjectJson::Read(const QByteArray& json,
     out.layers.push_back(layer);
   }
 
+  // Layers, brushes and styles share one id space.
+  QSet<Id> taken = layer_ids;
+  QSet<Id> brush_ids;
+  for (const QJsonValue value :
+       root.value(QStringLiteral("brushes")).toArray()) {
+    const bool is_full =
+        static_cast<int>(out.brushes.size()) >= BrushManager::kMaxBrushes;
+    const std::optional<Brush> brush =
+        is_full ? std::nullopt
+                : LookJson::ReadBrush(value.toObject(), taken, warnings);
+    if (brush.has_value()) {
+      taken.insert(brush->id);
+      brush_ids.insert(brush->id);
+      highest = std::max(highest, brush->id);
+      out.brushes.push_back(*brush);
+    }
+  }
+  QSet<Id> style_ids;
+  for (const QJsonValue value :
+       root.value(QStringLiteral("styles")).toArray()) {
+    const bool is_full =
+        static_cast<int>(out.styles.size()) >= StyleManager::kMaxStyles;
+    const std::optional<Style> style =
+        is_full
+            ? std::nullopt
+            : LookJson::ReadStyle(value.toObject(), taken, brush_ids, warnings);
+    if (style.has_value()) {
+      taken.insert(style->id);
+      style_ids.insert(style->id);
+      highest = std::max(highest, style->id);
+      out.styles.push_back(*style);
+    }
+  }
+
   QHash<Id, Point> points;
   for (const QJsonValue value : point_list) {
     const QJsonObject json_point = value.toObject();
@@ -259,7 +301,7 @@ std::optional<LoadedProject> ProjectJson::Read(const QByteArray& json,
     shape.id = json_shape.value(QStringLiteral("id")).toInt(kNoId);
     shape.layer = json_shape.value(QStringLiteral("layer")).toInt(kNoId);
     const bool is_bad_id = shape.id <= kNoId || shape_ids.contains(shape.id) ||
-                           layer_ids.contains(shape.id);
+                           taken.contains(shape.id);
     if (is_bad_id) {
       warnings.Add(QStringLiteral("Dropped a shape with a bad id"));
       continue;
@@ -285,14 +327,35 @@ std::optional<LoadedProject> ProjectJson::Read(const QByteArray& json,
     }
     shape.closed = json_shape.value(QStringLiteral("closed")).toBool(false) &&
                    shape.points.size() >= 3;
-    const std::optional<QColor> fill =
-        ReadColor(json_shape.value(QStringLiteral("fill")));
-    const std::optional<QColor> line =
-        ReadColor(json_shape.value(QStringLiteral("line")));
-    shape.look.has_fill = fill.has_value();
-    shape.look.fill = fill.value_or(shape.look.fill);
-    shape.look.has_line = line.has_value();
-    shape.look.line = line.value_or(shape.look.line);
+    ShapeLook& look = shape.look;
+    LookJson::ReadColor(json_shape.value(QStringLiteral("fill")), look.has_fill,
+                        look.fill);
+    LookJson::ReadColor(json_shape.value(QStringLiteral("line")), look.has_line,
+                        look.line);
+    look.brush = json_shape.value(QStringLiteral("brush")).toInt(kNoId);
+    const QJsonArray styles =
+        json_shape.value(QStringLiteral("styles")).toArray();
+    for (int slot = 0; slot < kStylesPerShape && slot < styles.size(); ++slot) {
+      shape.styles[static_cast<size_t>(slot)] = styles[slot].toInt(kNoId);
+    }
+    const bool has_lost_link =
+        (look.brush != kNoId && !brush_ids.contains(look.brush)) ||
+        std::ranges::any_of(shape.styles, [&](Id style) {
+          return style != kNoId && !style_ids.contains(style);
+        });
+    if (has_lost_link) {
+      warnings.Add(QStringLiteral("Shape %1 lost a style or brush that is "
+                                  "missing")
+                       .arg(shape.id));
+      if (!brush_ids.contains(look.brush)) {
+        look.brush = kNoId;
+      }
+      for (Id& style : shape.styles) {
+        if (!style_ids.contains(style)) {
+          style = kNoId;
+        }
+      }
+    }
     shape.look.line_width = static_cast<float>(
         std::clamp(json_shape.value(QStringLiteral("line_width")).toDouble(3.0),
                    0.0, 1000.0));
@@ -303,6 +366,9 @@ std::optional<LoadedProject> ProjectJson::Read(const QByteArray& json,
 
   out.next_id =
       std::max(root.value(QStringLiteral("next_id")).toInt(1), highest + 1);
+  if (version < 2) {
+    UpgradeFrom1(out);
+  }
   loaded.warnings = warnings.Take();
   return loaded;
 }

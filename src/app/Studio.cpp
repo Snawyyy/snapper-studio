@@ -212,6 +212,9 @@ void Studio::CreatePanels() {
 
   const auto hint = [this](const QString& text) { window_->ShowHint(text); };
   color_popover_ = new ColorPopover(window_->Widget());
+  // Its colors belong to the project that was open.
+  QObject::connect(document_.get(), &Document::Reset, color_popover_,
+                   &ColorPopover::Close);
   style_actions_ =
       std::make_unique<StyleActions>(*document_, *looks_, *undo_, hint);
   style_actions_->RegisterCommands(*commands_);

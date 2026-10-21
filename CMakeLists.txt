@@ -34,3 +34,6 @@ target_link_libraries(snapper-studio PRIVATE snapper_core)
 enable_testing()
 add_subdirectory(tests)
 
+# Dev tool: drives the app offscreen from a script and takes screenshots.
+qt_add_executable(snapper-drive tools/ui-driver/main.cpp)
+target_link_libraries(snapper-drive PRIVATE snapper_core Qt6::Test)

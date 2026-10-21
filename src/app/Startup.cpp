@@ -29,6 +29,16 @@ void SetUpApplication(QApplication& app) {
   KDDockWidgets::Config& docks = KDDockWidgets::Config::self();
   docks.setFlags(docks.flags() |
                  KDDockWidgets::Config::Flag_CloseOnlyCurrentTab);
+
+  // As in Figma, the strip you grab to resize panels is wider than the line
+  // drawn between them: a 1 px gap with an unpainted 12 px grab strip centered
+  // over it, so a pen finds it easily.
+  constexpr int kPanelGap = 1;
+  constexpr int kPanelGrabWidth = 12;
+  docks.setSeparatorThickness(kPanelGrabWidth);
+  docks.setLayoutSpacing(kPanelGap);
+  docks.setDisabledPaintEvents(
+      KDDockWidgets::Config::CustomizableWidget_Separator);
 }
 
 }  // namespace snapper

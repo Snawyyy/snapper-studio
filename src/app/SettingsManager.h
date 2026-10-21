@@ -12,9 +12,9 @@ namespace snapper {
 // and a setter here, so nothing else reads or writes QSettings keys.
 class SettingsManager {
  public:
-  // Bump when panels are added, removed or renamed, so an old saved layout
-  // is dropped instead of restored wrong.
-  static constexpr int kLayoutVersion = 1;
+  // Bump when panels are added, removed or renamed, or the gap between them
+  // changes, so an old saved layout is dropped instead of restored wrong.
+  static constexpr int kLayoutVersion = 2;
 
   // Uses the app's normal settings file.
   SettingsManager();

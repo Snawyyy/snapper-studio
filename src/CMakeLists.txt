@@ -16,6 +16,10 @@ target_sources(snapper_core PRIVATE
   edit/tools/PenStroke.cpp edit/tools/PenStroke.h
   edit/tools/PenTool.cpp edit/tools/PenTool.h
   edit/tools/ShapeTool.cpp edit/tools/ShapeTool.h
+  edit/HitTest.cpp edit/HitTest.h
+  edit/MacroCommand.h
+  edit/SelectionCommands.cpp edit/SelectionCommands.h
+  edit/tools/SelectTool.cpp edit/tools/SelectTool.h
   edit/LayerCommands.cpp edit/LayerCommands.h
   edit/ShapeCommands.cpp edit/ShapeCommands.h
   edit/UndoManager.cpp edit/UndoManager.h

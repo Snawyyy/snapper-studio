@@ -13,6 +13,7 @@
 
 #include "app/CommandRegistry.h"
 #include "document/Document.h"
+#include "edit/SelectionManager.h"
 #include "edit/ToolManager.h"
 #include "render/Renderer.h"
 
@@ -31,8 +32,12 @@ constexpr int kShadowAlpha = 18;
 
 }  // namespace
 
-CanvasView::CanvasView(Document& document, const Theme& theme, QWidget* parent)
-    : QWidget(parent), document_(document), theme_(theme) {
+CanvasView::CanvasView(Document& document, SelectionManager& selection,
+                       const Theme& theme, QWidget* parent)
+    : QWidget(parent),
+      document_(document),
+      selection_(selection),
+      theme_(theme) {
   setObjectName(QStringLiteral("canvas"));
   setFocusPolicy(Qt::StrongFocus);
   setMouseTracking(true);
@@ -45,6 +50,8 @@ CanvasView::CanvasView(Document& document, const Theme& theme, QWidget* parent)
   connect(&document_.Shapes(), &ShapeManager::LayerContentChanged, this,
           repaint);
   connect(&document_, &Document::CanvasChanged, this, repaint);
+  connect(&selection_, &SelectionManager::PointsChanged, this, repaint);
+  connect(&selection_, &SelectionManager::ActiveLayerChanged, this, repaint);
   connect(&document_, &Document::Reset, this, [this] { FitCanvas(); });
 }
 
@@ -55,12 +62,11 @@ void CanvasView::RegisterCommands(CommandRegistry& commands) {
       .shortcut = QKeySequence(Qt::SHIFT | Qt::Key_F),
       .run = [this] { FitCanvas(); },
   });
-  // Until there is a selection to fit, this fits the canvas.
   commands.Add({
       .id = QStringLiteral("view.fit-selection"),
       .title = QStringLiteral("Fit Selection"),
       .shortcut = QKeySequence(Qt::Key_F),
-      .run = [this] { FitCanvas(); },
+      .run = [this] { FitSelection(); },
   });
   commands.Add({
       .id = QStringLiteral("view.actual-size"),
@@ -90,6 +96,24 @@ void CanvasView::SetTools(ToolManager* tools) {
 void CanvasView::FitCanvas() {
   const QSizeF size = document_.Canvas().size.toSizeF();
   view_.Fit(QRectF(QPointF(0, 0), size), kFitMargin);
+  update();
+}
+
+// With nothing selected, fits the canvas instead. A single point is shown
+// at the zoom it already has.
+void CanvasView::FitSelection() {
+  const std::optional<QRectF> bounds = selection_.Bounds();
+  if (!bounds.has_value()) {
+    FitCanvas();
+    return;
+  }
+  const bool is_one_spot = bounds->width() < 1 && bounds->height() < 1;
+  if (is_one_spot) {
+    view_.PanBy(view_.ToScreen(view_.Center()) -
+                view_.ToScreen(bounds->center()));
+  } else {
+    view_.Fit(*bounds, kFitMargin);
+  }
   update();
 }
 
@@ -190,7 +214,8 @@ ToolInput CanvasView::MakeInput(const QPointF& screen, float pressure,
           .screen = screen,
           .pressure = pressure,
           .modifiers = modifiers,
-          .canvas_per_screen = 1.0 / view_.Zoom()};
+          .canvas_per_screen = 1.0 / view_.Zoom(),
+          .view = &view_};
 }
 
 void CanvasView::mousePressEvent(QMouseEvent* event) {
@@ -320,6 +345,11 @@ void CanvasView::keyPressEvent(QKeyEvent* event) {
   if (is_cancel) {
     is_tool_pressed_ = false;
     tools_->Cancel();
+    return;
+  }
+  const bool is_used_by_tool =
+      tools_ != nullptr && tools_->KeyPressed(event->key(), event->modifiers());
+  if (is_used_by_tool) {
     return;
   }
   const bool is_space = event->key() == Qt::Key_Space;

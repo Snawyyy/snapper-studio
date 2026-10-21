@@ -1,6 +1,7 @@
 #include <QTest>
 
 #include "app/CommandRegistry.h"
+#include "app/Theme.h"
 #include "document/Document.h"
 #include "edit/SelectionManager.h"
 #include "edit/ToolManager.h"
@@ -34,6 +35,7 @@ struct Fixture {
     const snapper::ToolContext context{.document = document,
                                        .undo = undo,
                                        .selection = selection,
+                                       .theme = theme,
                                        .hint = [](const QString&) {}};
     tools.Add(
         std::make_unique<FakeTool>(context, QStringLiteral("pen"), Qt::Key_P));
@@ -46,6 +48,7 @@ struct Fixture {
   snapper::UndoManager undo;
   snapper::SelectionManager selection{document};
   snapper::CommandRegistry commands;
+  snapper::Theme theme;
   ToolManager tools;
 };
 

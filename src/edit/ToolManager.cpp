@@ -113,6 +113,15 @@ void ToolManager::DrawOverlay(QPainter& painter,
   }
 }
 
+bool ToolManager::KeyPressed(int key, Qt::KeyboardModifiers modifiers) {
+  Tool* tool = Active();
+  const bool is_used = tool != nullptr && tool->KeyPress(key, modifiers);
+  if (is_used) {
+    Q_EMIT OverlayChanged();
+  }
+  return is_used;
+}
+
 // Letting go of a held tool key returns to the tool before. A tap leaves
 // the new tool on. Mid-stroke, the return waits for the stroke to end.
 void ToolManager::KeyReleased(int key) {

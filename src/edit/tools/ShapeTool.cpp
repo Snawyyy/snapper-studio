@@ -46,7 +46,7 @@ void ShapeTool::SetSettings(const ShapeToolSettings& settings) {
 }
 
 void ShapeTool::Press(const ToolInput& input) {
-  if (!CanDrawOnActiveLayer(Context())) {
+  if (!CanChangeActiveLayer(Context(), QStringLiteral("draw on"))) {
     return;
   }
   is_dragging_ = true;

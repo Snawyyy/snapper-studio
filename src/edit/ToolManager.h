@@ -47,6 +47,8 @@ class ToolManager : public QObject {
   void Leave();
   void Cancel();
   void DrawOverlay(QPainter& painter, const ViewTransform& view) const;
+  // A key went down while the canvas had focus. True when a tool used it.
+  bool KeyPressed(int key, Qt::KeyboardModifiers modifiers);
   // A key came up while the canvas had focus.
   void KeyReleased(int key);
 

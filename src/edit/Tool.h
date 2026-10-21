@@ -11,6 +11,7 @@ class QPainter;
 namespace snapper {
 
 class Document;
+struct Theme;
 class SelectionManager;
 class UndoManager;
 class ViewTransform;
@@ -24,6 +25,8 @@ struct ToolInput {
   Qt::KeyboardModifiers modifiers;
   // Canvas pixels per screen pixel, so tools can size things on screen.
   double canvas_per_screen = 1.0;
+  // The canvas view, for hit tests in screen pixels. Not owned.
+  const ViewTransform* view = nullptr;
 };
 
 // What every tool works with.
@@ -31,6 +34,7 @@ struct ToolContext {
   Document& document;
   UndoManager& undo;
   SelectionManager& selection;
+  const Theme& theme;
   // Shows a line in the status bar naming the next step or what went
   // wrong. An empty text clears it.
   std::function<void(const QString&)> hint;
@@ -61,6 +65,10 @@ class Tool {
   virtual void DoubleClick(const ToolInput& /*input*/) {}
   // The pointer left the canvas.
   virtual void Leave() {}
+  // A key pressed while the canvas has focus. Returns true when used.
+  virtual bool KeyPress(int /*key*/, Qt::KeyboardModifiers /*modifiers*/) {
+    return false;
+  }
   // Drops whatever is in progress, for Escape or a tool switch mid-drag.
   virtual void Cancel() {}
   // Draws previews and handles over the artwork, in screen coordinates.

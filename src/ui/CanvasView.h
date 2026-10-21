@@ -11,6 +11,7 @@ namespace snapper {
 
 class CommandRegistry;
 class Document;
+class SelectionManager;
 class ToolManager;
 struct ToolInput;
 
@@ -22,12 +23,14 @@ class CanvasView : public QWidget {
   Q_OBJECT
 
  public:
-  CanvasView(Document& document, const Theme& theme, QWidget* parent = nullptr);
+  CanvasView(Document& document, SelectionManager& selection,
+             const Theme& theme, QWidget* parent = nullptr);
 
   // Fit Canvas, Fit Selection, Actual Size, Zoom In and Zoom Out.
   void RegisterCommands(CommandRegistry& commands);
 
   void FitCanvas();
+  void FitSelection();
   void ZoomAround(double factor);
   void ActualSize();
   const ViewTransform& View() const { return view_; }
@@ -62,6 +65,7 @@ class CanvasView : public QWidget {
                      const QPointF& pos);
 
   Document& document_;
+  SelectionManager& selection_;
   const Theme& theme_;
   ViewTransform view_;
   bool has_fitted_ = false;

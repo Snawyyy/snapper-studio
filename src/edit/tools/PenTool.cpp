@@ -47,7 +47,7 @@ void PenTool::SetSettings(const PenSettings& settings) {
 }
 
 void PenTool::Press(const ToolInput& input) {
-  if (!CanDrawOnActiveLayer(Context())) {
+  if (!CanChangeActiveLayer(Context(), QStringLiteral("draw on"))) {
     return;
   }
   stroke_ = std::make_unique<PenStroke>(settings_.smoothing,

@@ -12,6 +12,7 @@
 #include "edit/ToolManager.h"
 #include "edit/UndoManager.h"
 #include "edit/tools/PenTool.h"
+#include "edit/tools/SelectTool.h"
 #include "edit/tools/ShapeTool.h"
 #include "ui/CanvasView.h"
 #include "ui/CommandBox.h"
@@ -62,7 +63,7 @@ Studio::Studio()
       selection_(std::make_unique<SelectionManager>(*document_)),
       tools_(std::make_unique<ToolManager>()) {
   document_->ResetToNew();
-  canvas_ = new CanvasView(*document_, theme_->CurrentTheme());
+  canvas_ = new CanvasView(*document_, *selection_, theme_->CurrentTheme());
   window_ = std::make_unique<MainWindow>(canvas_);
   CreateTools();
   command_box_ = new CommandBox(commands_.get(), window_->Widget());
@@ -70,6 +71,7 @@ Studio::Studio()
   undo_->RegisterCommands(*commands_);
   canvas_->RegisterCommands(*commands_);
   tools_->RegisterCommands(*commands_);
+  selection_->RegisterCommands(*commands_, *undo_);
   window_->RegisterCommands(*commands_);
   commands_->AttachShortcutsTo(window_->Widget());
   window_->Widget()->installEventFilter(
@@ -100,6 +102,7 @@ void Studio::CreateTools() {
       .document = *document_,
       .undo = *undo_,
       .selection = *selection_,
+      .theme = theme_->CurrentTheme(),
       .hint = [this](const QString& text) { window_->ShowHint(text); },
   };
   auto* options = new ToolOptionsPanel();
@@ -111,6 +114,7 @@ void Studio::CreateTools() {
                      settings_->SetPen(settings);
                    }));
   tools_->Add(std::move(pen));
+  tools_->Add(std::make_unique<SelectTool>(context));
 
   for (const ShapeTool::Kind kind :
        {ShapeTool::Kind::kRectangle, ShapeTool::Kind::kEllipse}) {

@@ -1,6 +1,7 @@
 #include "app/Studio.h"
 
 #include <QEvent>
+#include <QUndoView>
 
 #include <functional>
 
@@ -149,6 +150,12 @@ void Studio::CreatePanels() {
   layers->RegisterCommands(*commands_);
   window_->SetPanelContent(MainWindow::kLayers, layers);
   layer_actions_->RegisterCommands(*commands_);
+
+  // Click a step to go back or forward to it.
+  auto* history = new QUndoView(undo_->Stack());
+  history->setObjectName(QStringLiteral("history"));
+  history->setEmptyLabel(QStringLiteral("New project"));
+  window_->SetPanelContent(MainWindow::kHistory, history);
 }
 
 void Studio::RegisterAppCommands() {

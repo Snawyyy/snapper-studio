@@ -25,7 +25,7 @@ target_include_directories(snapper_core PUBLIC src)
 target_link_libraries(snapper_core PUBLIC
   snapper_options Qt6::Widgets KDAB::kddockwidgets)
 
-qt_add_executable(snapper-studio src/main.cpp)
+qt_add_executable(snapper-studio src/main.cpp theme/theme.qrc)
 target_link_libraries(snapper-studio PRIVATE snapper_core)
 
 enable_testing()

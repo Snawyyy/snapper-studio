@@ -39,7 +39,10 @@ MainWindow::MainWindow(QWidget* parent)
                                            kWindowOptions, parent) {
   setWindowTitle(QStringLiteral("Snapper Studio"));
   resize(1280, 800);
-  setPersistentCentralWidget(new QWidget());
+  auto* canvas = new QWidget();
+  canvas->setObjectName(QStringLiteral("canvas"));
+  canvas->setAttribute(Qt::WA_StyledBackground);
+  setPersistentCentralWidget(canvas);
   CreatePanels();
   ArrangeDefaultLayout();
 }

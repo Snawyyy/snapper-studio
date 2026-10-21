@@ -1,0 +1,31 @@
+{
+  "colors": {
+    "window": "#1C1C1E",
+    "raised": "#2C2C2E",
+    "hover": "#3A3A3C",
+    "pressed": "#141416",
+    "canvas_surround": "#141416",
+    "separator": "#1AFFFFFF",
+    "text": "#D9FFFFFF",
+    "text_secondary": "#8CFFFFFF",
+    "text_disabled": "#40FFFFFF",
+    "accent": "#D63D55",
+    "accent_pill": "#40D63D55",
+    "setup_mode": "#FF9F0A",
+    "action_mode": "#BF5AF2",
+    "warning": "#FFD60A",
+    "error": "#FF453A"
+  },
+  "sizes": {
+    "radius_control": 6,
+    "radius_pill": 8,
+    "radius_popup": 10,
+    "panel_padding": 16,
+    "row_height": 28,
+    "button_size": 32,
+    "icon_size": 18,
+    "font_body": 13,
+    "font_small": 11
+  },
+  "font_family": "Inter"
+}

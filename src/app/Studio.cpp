@@ -6,6 +6,8 @@
 
 #include "app/CommandRegistry.h"
 #include "app/SettingsManager.h"
+#include "document/Document.h"
+#include "edit/UndoManager.h"
 #include "ui/CommandBox.h"
 #include "ui/MainWindow.h"
 
@@ -37,9 +39,13 @@ class CloseWatcher : public QObject {
 Studio::Studio()
     : settings_(std::make_unique<SettingsManager>()),
       commands_(std::make_unique<CommandRegistry>()),
+      document_(std::make_unique<Document>()),
+      undo_(std::make_unique<UndoManager>()),
       window_(std::make_unique<MainWindow>()) {
+  document_->ResetToNew();
   command_box_ = new CommandBox(commands_.get(), window_->Widget());
   RegisterAppCommands();
+  undo_->RegisterCommands(*commands_);
   window_->RegisterCommands(*commands_);
   commands_->AttachShortcutsTo(window_->Widget());
   window_->Widget()->installEventFilter(

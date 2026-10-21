@@ -9,6 +9,9 @@ target_sources(snapper_core PRIVATE
   document/Ids.h
   document/LayerManager.cpp document/LayerManager.h
   document/ShapeManager.cpp document/ShapeManager.h
+  edit/LayerCommands.cpp edit/LayerCommands.h
+  edit/ShapeCommands.cpp edit/ShapeCommands.h
+  edit/UndoManager.cpp edit/UndoManager.h
   ui/CommandBox.cpp ui/CommandBox.h
   ui/MainWindow.cpp ui/MainWindow.h
 )

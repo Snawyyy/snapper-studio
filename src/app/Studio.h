@@ -8,8 +8,10 @@ namespace snapper {
 
 class CommandBox;
 class CommandRegistry;
+class Document;
 class MainWindow;
 class SettingsManager;
+class UndoManager;
 
 // Owns every manager and the main window, and wires them together. The app
 // and the UI driver each make one.
@@ -24,6 +26,8 @@ class Studio {
   void Show();
   QWidget* Window() const;
   CommandRegistry& Commands() { return *commands_; }
+  Document& Doc() { return *document_; }
+  UndoManager& Undo() { return *undo_; }
 
  private:
   void RegisterAppCommands();
@@ -32,6 +36,8 @@ class Studio {
 
   std::unique_ptr<SettingsManager> settings_;
   std::unique_ptr<CommandRegistry> commands_;
+  std::unique_ptr<Document> document_;
+  std::unique_ptr<UndoManager> undo_;
   std::unique_ptr<MainWindow> window_;
   CommandBox* command_box_ = nullptr;  // owned by the window
 };

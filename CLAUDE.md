@@ -5,14 +5,18 @@ installed system-wide (Arch). Design docs: ARCHITECTURE.md, ROADMAP.md,
 UX_PHILOSOPHY.md.
 
 ```bash
-cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug \
-  -DCMAKE_EXPORT_COMPILE_COMMANDS=ON                    # configure, feeds clangd
+cmake -S . -B /mnt/HyperDrive/snawy/builds/snapper-studio -G Ninja \
+  -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=ON  # configure
 cmake --build build                                     # build
 ctest --test-dir build --output-on-failure              # Qt Test suite
 run-clang-tidy -p build -quiet "$PWD/(src|tools|tests)/" # lint
 clang-format -i src/*/*.cpp src/*/*.h src/main.cpp tests/*.cpp tools/*/*.cpp
 ./build/snapper-studio                                  # run
 ```
+
+`build` links to that folder on the SSD, since this drive is slow.
+Configure with the real path, not `build`: moc writes include paths
+relative to the folder and they break through the link.
 
 ## Checking the UI without the user's screen
 

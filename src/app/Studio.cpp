@@ -12,10 +12,12 @@
 #include "edit/ToolManager.h"
 #include "edit/UndoManager.h"
 #include "edit/tools/PenTool.h"
+#include "edit/tools/ShapeTool.h"
 #include "ui/CanvasView.h"
 #include "ui/CommandBox.h"
 #include "ui/MainWindow.h"
 #include "ui/PenOptions.h"
+#include "ui/ShapeOptions.h"
 #include "ui/ToolOptionsPanel.h"
 
 namespace snapper {
@@ -109,6 +111,18 @@ void Studio::CreateTools() {
                      settings_->SetPen(settings);
                    }));
   tools_->Add(std::move(pen));
+
+  for (const ShapeTool::Kind kind :
+       {ShapeTool::Kind::kRectangle, ShapeTool::Kind::kEllipse}) {
+    auto shape = std::make_unique<ShapeTool>(context, kind);
+    const QString id = shape->Info().id;
+    shape->SetSettings(settings_->ShapeTool(id));
+    options->AddPage(
+        id, new ShapeOptions(*shape, [this, id](const ShapeToolSettings& s) {
+          settings_->SetShapeTool(id, s);
+        }));
+    tools_->Add(std::move(shape));
+  }
 
   window_->SetPanelContent(MainWindow::kToolOptions, options);
   options->ShowTool(tools_->ActiveId());

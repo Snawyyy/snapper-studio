@@ -9,6 +9,7 @@
 #include "edit/SelectionManager.h"
 #include "edit/ShapeCommands.h"
 #include "edit/UndoManager.h"
+#include "edit/tools/LayerCheck.h"
 #include "render/Renderer.h"
 #include "render/ViewTransform.h"
 
@@ -46,23 +47,7 @@ void PenTool::SetSettings(const PenSettings& settings) {
 }
 
 void PenTool::Press(const ToolInput& input) {
-  const Document& document = Context().document;
-  const Layer* layer =
-      document.Layers().Find(Context().selection.ActiveLayer());
-  const bool is_vector_layer =
-      layer != nullptr && layer->type == LayerType::kVector;
-  if (!is_vector_layer) {
-    Context().hint(QStringLiteral("Pick a vector layer to draw on"));
-    return;
-  }
-  if (!layer->visible) {
-    Context().hint(
-        QStringLiteral("%1 is hidden: show it to draw on it").arg(layer->name));
-    return;
-  }
-  if (layer->locked) {
-    Context().hint(QStringLiteral("%1 is locked: unlock it to draw on it")
-                       .arg(layer->name));
+  if (!CanDrawOnActiveLayer(Context())) {
     return;
   }
   stroke_ = std::make_unique<PenStroke>(settings_.smoothing,

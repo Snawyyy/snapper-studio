@@ -43,27 +43,38 @@ const Point& PointAt(const Shape& shape, int index) {
   return shape.points[static_cast<size_t>(wrapped)];
 }
 
-// The unit direction of the line through a point, along its neighbors.
-QPointF TangentAt(const Point& before, const Point& after) {
+// A handle never reaches past this share of its own segment, so a short
+// segment next to a long one can't overshoot into a hook.
+constexpr double kMaxHandleShare = 0.5;
+
+// The handle leaving `at` toward `toward`: along the line between its
+// neighbors, as long as the curve value times half that line.
+QPointF Handle(const Point& before, const Point& at, const Point& after,
+               const QPointF& toward) {
   const QPointF along = after.pos - before.pos;
-  const double length = std::hypot(along.x(), along.y());
-  return length < 1e-9 ? QPointF() : along / length;
+  const double span = std::hypot(along.x(), along.y());
+  if (span < 1e-9) {
+    return at.pos;
+  }
+  const double segment = QLineF(at.pos, toward).length();
+  const double length =
+      std::min(at.curve * span / 2, kMaxHandleShare * segment);
+  const QPointF direction = along / span;
+  const bool is_forward = QPointF::dotProduct(toward - at.pos, direction) >= 0;
+  return at.pos + direction * (is_forward ? length : -length);
 }
 
-// A cubic piece from point i to i + 1. Each end's handle runs along the
-// line between that point's neighbors. Its length is the point's curve
-// value times this segment's length, so a short segment next to a long
-// one never overshoots into a hook.
+// A cubic piece from point i to i + 1. With every curve at kEllipseCurve,
+// four points make an exact ellipse.
 Segment SegmentAt(const Shape& shape, int i) {
   const Point& before = PointAt(shape, i - 1);
   const Point& from = PointAt(shape, i);
   const Point& to = PointAt(shape, i + 1);
   const Point& after = PointAt(shape, i + 2);
-  const double length = QLineF(from.pos, to.pos).length();
   return Segment{
       .from = from.pos,
-      .control1 = from.pos + TangentAt(before, to) * (length * from.curve),
-      .control2 = to.pos - TangentAt(from, after) * (length * to.curve),
+      .control1 = Handle(before, from, to, to.pos),
+      .control2 = Handle(from, to, after, from.pos),
       .to = to.pos,
       .from_width = from.width,
       .to_width = to.width,

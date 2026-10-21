@@ -15,6 +15,9 @@ namespace snapper {
 // How smooth the line is at a point: 0 is a sharp corner, kSmoothCurve is
 // a natural curve through its neighbors.
 constexpr float kSmoothCurve = 0.33F;
+// Four points with this curve, at the ends of an ellipse's axes, draw the
+// ellipse.
+constexpr float kEllipseCurve = 0.5523F;
 
 struct Point {
   Id id = kNoId;

@@ -14,6 +14,10 @@ const QString kPenPressureKey = QStringLiteral("pen/pressure_width");
 const QString kPenCloseKey = QStringLiteral("pen/close_ends");
 const QString kPenFillKey = QStringLiteral("pen/fill_closed");
 
+QString ShapeKey(const QString& tool, const char* name) {
+  return QStringLiteral("%1/%2").arg(tool, QLatin1StringView(name));
+}
+
 }  // namespace
 
 SettingsManager::SettingsManager() : store_(std::make_unique<QSettings>()) {}
@@ -57,6 +61,26 @@ void SettingsManager::SetPen(const PenSettings& pen) {
   store_->setValue(kPenPressureKey, pen.pressure_width);
   store_->setValue(kPenCloseKey, pen.close_ends);
   store_->setValue(kPenFillKey, pen.fill_closed);
+}
+
+ShapeToolSettings SettingsManager::ShapeTool(const QString& tool) const {
+  const ShapeToolSettings defaults;
+  return {
+      .has_fill =
+          store_->value(ShapeKey(tool, "fill"), defaults.has_fill).toBool(),
+      .has_line =
+          store_->value(ShapeKey(tool, "line"), defaults.has_line).toBool(),
+      .line_width =
+          store_->value(ShapeKey(tool, "line_width"), defaults.line_width)
+              .toDouble(),
+  };
+}
+
+void SettingsManager::SetShapeTool(const QString& tool,
+                                   const ShapeToolSettings& settings) {
+  store_->setValue(ShapeKey(tool, "fill"), settings.has_fill);
+  store_->setValue(ShapeKey(tool, "line"), settings.has_line);
+  store_->setValue(ShapeKey(tool, "line_width"), settings.line_width);
 }
 
 }  // namespace snapper

@@ -5,6 +5,7 @@
 #include <memory>
 
 #include "edit/tools/PenTool.h"
+#include "edit/tools/ShapeTool.h"
 
 class QSettings;
 
@@ -34,6 +35,10 @@ class SettingsManager {
   // The pen's last settings, or its defaults on first run.
   PenSettings Pen() const;
   void SetPen(const PenSettings& pen);
+
+  // A shape tool's last settings, by tool id ("rectangle", "ellipse").
+  ShapeToolSettings ShapeTool(const QString& tool) const;
+  void SetShapeTool(const QString& tool, const ShapeToolSettings& settings);
 
  private:
   std::unique_ptr<QSettings> store_;

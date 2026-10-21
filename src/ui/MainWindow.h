@@ -12,6 +12,8 @@ class MainWindow;
 
 namespace snapper {
 
+class CommandRegistry;
+
 // The app window: the canvas sits fixed in the middle and takes all extra
 // space, and every other panel is a dock the user can move, tab, float and
 // close. Panels start empty until their milestone fills them.
@@ -31,6 +33,10 @@ class MainWindow {
   QWidget* Widget() const;
   void Show();
 
+  // Adds a "Show <panel>" command per panel, which opens it if closed and
+  // brings it to the front.
+  void RegisterCommands(CommandRegistry& commands);
+
  private:
   enum Panel {
     kToolOptions,
@@ -44,6 +50,7 @@ class MainWindow {
 
   void CreatePanels();
   void ArrangeDefaultLayout();
+  void ShowPanel(int panel);
 
   std::unique_ptr<KDDockWidgets::QtWidgets::MainWindow> window_;
   std::array<KDDockWidgets::QtWidgets::DockWidget*, kPanelCount> panels_{};

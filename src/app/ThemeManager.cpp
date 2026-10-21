@@ -163,6 +163,11 @@ QString ThemeManager::BuildStyleSheet() const {
   css += QStringLiteral("#canvas { background: %1; }\n")
              .arg(Css(t.canvas_surround));
   css += QStringLiteral(
+             "#command-box { background: %1; border: 1px solid %2;"
+             " border-radius: %3px; }\n")
+             .arg(Css(t.raised), Css(t.separator))
+             .arg(t.radius_popup);
+  css += QStringLiteral(
              "QTabWidget::pane { background: %1; border: none;"
              " border-top: 1px solid %2; }\n")
              .arg(Css(t.window), Css(t.separator));

@@ -10,3 +10,4 @@ function(snapper_add_test name)
 endfunction()
 
 snapper_add_test(tst_thememanager)
+snapper_add_test(tst_commandregistry)

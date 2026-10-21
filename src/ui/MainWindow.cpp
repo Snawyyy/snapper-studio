@@ -5,6 +5,8 @@
 
 #include <QWidget>
 
+#include "app/CommandRegistry.h"
+
 namespace snapper {
 
 namespace {
@@ -53,6 +55,28 @@ MainWindow::~MainWindow() = default;
 QWidget* MainWindow::Widget() const { return window_.get(); }
 
 void MainWindow::Show() { window_->show(); }
+
+void MainWindow::RegisterCommands(CommandRegistry& commands) {
+  for (int i = 0; i < kPanelCount; ++i) {
+    const PanelInfo& info = kPanelInfo[static_cast<size_t>(i)];
+    commands.Add({
+        .id = QStringLiteral("panel.%1.show").arg(QLatin1StringView(info.id)),
+        .title = QStringLiteral("Show %1").arg(QLatin1StringView(info.title)),
+        .shortcut = {},
+        .run = [this, i] { ShowPanel(i); },
+    });
+  }
+}
+
+void MainWindow::ShowPanel(int panel) {
+  KDDockWidgets::QtWidgets::DockWidget* dock =
+      panels_[static_cast<size_t>(panel)];
+  if (!dock->isOpen()) {
+    dock->open();
+  }
+  dock->setAsCurrentTab();
+  dock->raise();
+}
 
 void MainWindow::CreatePanels() {
   for (int i = 0; i < kPanelCount; ++i) {

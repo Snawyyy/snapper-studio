@@ -32,7 +32,7 @@
 #include <vector>
 
 #include "app/Startup.h"
-#include "ui/MainWindow.h"
+#include "app/Studio.h"
 
 namespace {
 
@@ -97,7 +97,8 @@ class Driver : public QObject {
 
   QWindow* Target() const {
     QWindow* focus = QGuiApplication::focusWindow();
-    return focus != nullptr ? focus : window_->windowHandle();
+    const bool has_focus_window = focus != nullptr;
+    return has_focus_window ? focus : window_->windowHandle();
   }
 
   bool ReadInts(const Step& step, int count, std::vector<int>& out) {
@@ -224,9 +225,9 @@ int main(int argc, char* argv[]) {
     return 2;
   }
 
-  snapper::MainWindow window;
-  window.Show();
-  Driver driver(window.Widget(), std::move(steps));
+  snapper::Studio studio;
+  studio.Show();
+  Driver driver(studio.Window(), std::move(steps));
   driver.Start();
   const int status = QApplication::exec();
   return status != 0 ? status : driver.ExitCode();

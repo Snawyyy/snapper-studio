@@ -1,13 +1,13 @@
 #include <QApplication>
 
 #include "app/Startup.h"
-#include "ui/MainWindow.h"
+#include "app/Studio.h"
 
 int main(int argc, char* argv[]) {
   QApplication app(argc, argv);
   snapper::SetUpApplication(app);
 
-  snapper::MainWindow window;
-  window.Show();
+  snapper::Studio studio;
+  studio.Show();
   return QApplication::exec();
 }

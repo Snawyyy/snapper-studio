@@ -6,6 +6,7 @@
 #include <functional>
 
 #include "app/CommandRegistry.h"
+#include "app/ProjectIo.h"
 #include "app/SettingsManager.h"
 #include "app/ThemeManager.h"
 #include "document/Document.h"
@@ -28,23 +29,25 @@ namespace snapper {
 
 namespace {
 
-// Calls back when its window is asked to close, while the panels are still
-// open. By the time the app quits they are already closed.
+// Asks its callback when the window is asked to close, while the panels
+// are still open. By the time the app quits they are already closed. A
+// false answer keeps the window open.
 class CloseWatcher : public QObject {
  public:
-  CloseWatcher(std::function<void()> on_close, QObject* parent)
-      : QObject(parent), on_close_(std::move(on_close)) {}
+  CloseWatcher(std::function<bool()> allow_close, QObject* parent)
+      : QObject(parent), allow_close_(std::move(allow_close)) {}
 
   bool eventFilter(QObject* watched, QEvent* event) override {
     const bool is_close = event->type() == QEvent::Close;
-    if (is_close) {
-      on_close_();
+    if (is_close && !allow_close_()) {
+      event->ignore();
+      return true;
     }
     return QObject::eventFilter(watched, event);
   }
 
  private:
-  std::function<void()> on_close_;
+  std::function<bool()> allow_close_;
 };
 
 // The theme was checked when the app started, so a failed load here only
@@ -81,8 +84,15 @@ Studio::Studio()
   selection_->RegisterCommands(*commands_, *undo_);
   window_->RegisterCommands(*commands_);
   commands_->AttachShortcutsTo(window_->Widget());
+  project_ = std::make_unique<ProjectIo>(
+      *document_, *undo_, window_->Widget(),
+      [this](const QString& text) { window_->ShowHint(text); });
+  project_->RegisterCommands(*commands_);
+  QObject::connect(project_.get(), &ProjectIo::TitleChanged, window_->Widget(),
+                   [this] { UpdateTitle(); });
+  UpdateTitle();
   window_->Widget()->installEventFilter(
-      new CloseWatcher([this] { SaveSession(); }, window_->Widget()));
+      new CloseWatcher([this] { return AllowClose(); }, window_->Widget()));
 }
 
 Studio::~Studio() = default;
@@ -90,6 +100,23 @@ Studio::~Studio() = default;
 void Studio::Show() {
   window_->Show();
   RestoreSession();
+  project_->CheckForRecovery();
+}
+
+bool Studio::AllowClose() {
+  if (!project_->ConfirmDiscard()) {
+    return false;
+  }
+  project_->DropRecovery();
+  SaveSession();
+  return true;
+}
+
+void Studio::UpdateTitle() {
+  QWidget* window = window_->Widget();
+  window->setWindowTitle(
+      QStringLiteral("%1[*] - Snapper Studio").arg(project_->DisplayName()));
+  window->setWindowModified(project_->IsDirty());
 }
 
 // A missing or unreadable layout keeps the default one.

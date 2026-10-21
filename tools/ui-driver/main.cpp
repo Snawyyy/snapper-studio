@@ -18,6 +18,9 @@
 //   type TEXT                type text into the focused control
 //   shot PATH                save a screenshot of the window, with
 //                            floating panels and popups drawn on top
+//   run COMMAND              run a command by id, like file.new
+//   save PATH                save the project there, no dialog
+//   open PATH                open the project there, no dialog
 //   focus                    print which control has focus
 //   windows                  print every visible window and where it is
 //   quit                     stop (also happens at the end of the script)
@@ -36,6 +39,8 @@
 #include <cstdio>
 #include <vector>
 
+#include "app/CommandRegistry.h"
+#include "app/ProjectIo.h"
 #include "app/Startup.h"
 #include "app/Studio.h"
 
@@ -83,8 +88,8 @@ bool ReadScript(const QString& path, std::vector<Step>& steps) {
 // (repaint, open popups, run timers) between actions.
 class Driver : public QObject {
  public:
-  Driver(QWidget* window, std::vector<Step> steps)
-      : window_(window), steps_(std::move(steps)) {}
+  Driver(snapper::Studio& studio, std::vector<Step> steps)
+      : studio_(studio), window_(studio.Window()), steps_(std::move(steps)) {}
 
   void Start() { Schedule(kStepDelayMs); }
   int ExitCode() const { return exit_code_; }
@@ -167,6 +172,25 @@ class Driver : public QObject {
         return;
       }
       std::printf("saved %s\n", qPrintable(step.rest));
+    } else if (action == u"run" && step.words.size() > 1) {
+      if (!studio_.Commands().Run(step.words[1])) {
+        Fail(step, "no command has that id");
+        return;
+      }
+    } else if (action == u"save" && step.words.size() > 1) {
+      QString error;
+      if (!studio_.Project().SaveTo(step.rest, &error)) {
+        std::fprintf(stderr, "line %d: %s\n", step.line, qPrintable(error));
+        Fail(step, "can't save");
+        return;
+      }
+    } else if (action == u"open" && step.words.size() > 1) {
+      QString error;
+      if (!studio_.Project().OpenFrom(step.rest, &error)) {
+        std::fprintf(stderr, "line %d: %s\n", step.line, qPrintable(error));
+        Fail(step, "can't open");
+        return;
+      }
     } else if (action == u"focus") {
       PrintFocus();
     } else if (action == u"windows") {
@@ -288,6 +312,7 @@ class Driver : public QObject {
                 qPrintable(focus->objectName()));
   }
 
+  snapper::Studio& studio_;
   QWidget* window_;
   std::vector<Step> steps_;
   size_t next_ = 0;
@@ -314,8 +339,10 @@ int main(int argc, char* argv[]) {
   }
 
   snapper::Studio studio;
+  // Nobody is there to answer questions about unsaved work.
+  studio.Project().SetPromptsEnabled(false);
   studio.Show();
-  Driver driver(studio.Window(), std::move(steps));
+  Driver driver(studio, std::move(steps));
   driver.Start();
   const int status = QApplication::exec();
   return status != 0 ? status : driver.ExitCode();

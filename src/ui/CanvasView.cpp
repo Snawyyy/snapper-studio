@@ -96,6 +96,7 @@ void CanvasView::SetTools(ToolManager* tools) {
 void CanvasView::FitCanvas() {
   const QSizeF size = document_.Canvas().size.toSizeF();
   view_.Fit(QRectF(QPointF(0, 0), size), kFitMargin);
+  is_fit_view_ = true;
   update();
 }
 
@@ -114,16 +115,19 @@ void CanvasView::FitSelection() {
   } else {
     view_.Fit(*bounds, kFitMargin);
   }
+  is_fit_view_ = false;
   update();
 }
 
 void CanvasView::ZoomAround(double factor) {
   view_.ZoomAt(rect().center(), factor);
+  is_fit_view_ = false;
   update();
 }
 
 void CanvasView::ActualSize() {
   view_.ResetZoom();
+  is_fit_view_ = false;
   update();
 }
 
@@ -170,6 +174,9 @@ void CanvasView::DrawSurround(QPainter& painter) const {
 
 void CanvasView::resizeEvent(QResizeEvent* event) {
   view_.SetViewSize(size().toSizeF());
+  if (is_fit_view_) {
+    FitCanvas();
+  }
   QWidget::resizeEvent(event);
 }
 
@@ -186,6 +193,7 @@ void CanvasView::showEvent(QShowEvent* event) {
 void CanvasView::wheelEvent(QWheelEvent* event) {
   const double units = event->angleDelta().y();
   view_.ZoomAt(event->position(), std::pow(kZoomPerWheelUnit, units));
+  is_fit_view_ = false;
   update();
   event->accept();
 }
@@ -203,6 +211,7 @@ bool CanvasView::StartViewDrag(Qt::MouseButton button,
   } else {
     return false;
   }
+  is_fit_view_ = false;
   last_drag_pos_ = pos;
   UpdateCursor();
   return true;
@@ -415,6 +424,7 @@ void CanvasView::HandleGesture(QEvent* event) {
     default:
       return;
   }
+  is_fit_view_ = false;
   update();
 }
 

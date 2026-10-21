@@ -12,6 +12,7 @@ set(CMAKE_AUTORCC ON)
 
 find_package(Qt6 6.8 REQUIRED COMPONENTS Widgets Test)
 find_package(KDDockWidgets-qt6 2.4 REQUIRED)
+find_package(libzip 1.11 REQUIRED)
 
 # Warnings are errors, and the code runs without exceptions or RTTI.
 add_library(snapper_options INTERFACE)
@@ -26,7 +27,9 @@ add_library(snapper_core STATIC)
 add_subdirectory(src)
 target_include_directories(snapper_core PUBLIC src)
 target_link_libraries(snapper_core PUBLIC
-  snapper_options Qt6::Widgets KDAB::kddockwidgets)
+  snapper_options Qt6::Widgets KDAB::kddockwidgets libzip::zip)
+target_compile_definitions(snapper_core PUBLIC
+  SNAPPER_VERSION="${PROJECT_VERSION}")
 
 qt_add_resources(snapper_core "theme" PREFIX "/theme" BASE theme
   FILES theme/theme.json)

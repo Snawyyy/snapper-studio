@@ -12,6 +12,7 @@ class CommandRegistry;
 class Document;
 class LayerActions;
 class MainWindow;
+class ProjectIo;
 class SelectionManager;
 class SettingsManager;
 class ThemeManager;
@@ -34,6 +35,7 @@ class Studio {
   Document& Doc() { return *document_; }
   UndoManager& Undo() { return *undo_; }
   ToolManager& Tools() { return *tools_; }
+  ProjectIo& Project() { return *project_; }
 
  private:
   void RegisterAppCommands();
@@ -41,6 +43,9 @@ class Studio {
   void CreatePanels();
   void RestoreSession();
   void SaveSession();
+  // Asks about unsaved work. False keeps the window open.
+  bool AllowClose();
+  void UpdateTitle();
 
   std::unique_ptr<ThemeManager> theme_;
   std::unique_ptr<SettingsManager> settings_;
@@ -50,6 +55,7 @@ class Studio {
   std::unique_ptr<SelectionManager> selection_;
   std::unique_ptr<ToolManager> tools_;
   std::unique_ptr<LayerActions> layer_actions_;
+  std::unique_ptr<ProjectIo> project_;
   std::unique_ptr<MainWindow> window_;
   // Both owned by the window.
   CanvasView* canvas_ = nullptr;

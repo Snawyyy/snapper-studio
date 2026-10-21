@@ -1,12 +1,15 @@
 target_sources(snapper_core PRIVATE
   app/CommandRegistry.cpp app/CommandRegistry.h
+  app/ProjectIo.cpp app/ProjectIo.h
   app/SettingsManager.cpp app/SettingsManager.h
   app/Startup.cpp app/Startup.h
   app/Studio.cpp app/Studio.h
   app/Theme.h
   app/ThemeManager.cpp app/ThemeManager.h
+  app/ZipArchive.cpp app/ZipArchive.h
   document/Document.cpp document/Document.h
   document/Ids.h
+  document/ProjectJson.cpp document/ProjectJson.h
   document/LayerManager.cpp document/LayerManager.h
   document/ShapeManager.cpp document/ShapeManager.h
   edit/SelectionManager.cpp edit/SelectionManager.h

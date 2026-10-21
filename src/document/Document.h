@@ -11,10 +11,20 @@
 namespace snapper {
 
 struct CanvasSettings {
+  static constexpr int kMaxSide = 16384;
+
   QSize size{1920, 1080};
   int fps = 24;
   int frames = 240;
   QColor background = Qt::white;
+};
+
+// Everything a project holds, as plain lists, for loading in one go.
+struct DocumentContents {
+  CanvasSettings canvas;
+  Id next_id = 1;
+  std::vector<Layer> layers;
+  std::vector<Shape> shapes;
 };
 
 // The whole project: the data managers plus canvas settings. Commands are
@@ -28,6 +38,10 @@ class Document : public QObject {
   // Empties everything and starts a project ready to draw: one vector
   // layer.
   void ResetToNew();
+  // Empties everything and fills it from loaded contents. Items the
+  // managers refuse (bad ids, over the limits) are skipped and counted.
+  int Replace(const DocumentContents& contents);
+  DocumentContents Contents() const;
 
   // A fresh id, never handed out before in this project.
   Id NewId() { return next_id_++; }

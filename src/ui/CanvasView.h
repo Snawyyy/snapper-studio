@@ -69,6 +69,8 @@ class CanvasView : public QWidget {
   const Theme& theme_;
   ViewTransform view_;
   bool has_fitted_ = false;
+  // True until the user zooms, pans or turns, so resizing keeps the fit.
+  bool is_fit_view_ = false;
   bool space_held_ = false;
   Drag drag_ = Drag::kNone;
   QPointF last_drag_pos_;

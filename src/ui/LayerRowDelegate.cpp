@@ -40,7 +40,8 @@ void LayerRowDelegate::paint(QPainter* painter,
   QStyleOptionViewItem opt = option;
   initStyleOption(&opt, index);
   const QWidget* widget = opt.widget;
-  const QStyle* style = widget != nullptr ? widget->style() : QApplication::style();
+  const QStyle* style =
+      widget != nullptr ? widget->style() : QApplication::style();
   style->drawPrimitive(QStyle::PE_PanelItemViewItem, &opt, painter, widget);
 
   const bool is_visible = index.data(kVisibleRole).toBool();

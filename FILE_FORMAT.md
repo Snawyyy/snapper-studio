@@ -39,8 +39,10 @@ that is unique in the project. Links between objects use ids.
   "layers":   [ { "id": 10, "parent": 0, "type": "bone", "name": "Body",
                   "visible": true, "locked": false } ],
   "shapes":   [ { "id": 200, "layer": 11, "points": [201, 202, 203],
-                  "closed": true, "styles": [5] } ],
-  "points":   [ { "id": 201, "x": 10.0, "y": 4.5, "curve": 0.33 } ],
+                  "closed": true, "styles": [5],
+                  "fill": "#FFF2C9A0", "line": null, "line_width": 3.0 } ],
+  "points":   [ { "id": 201, "x": 10.0, "y": 4.5, "curve": 0.33,
+                  "width": 1.0 } ],
   "bones":    [ { "id": 300, "layer": 10, "parent": 0, "name": "upper_arm",
                   "x": 0.0, "y": 0.0, "angle": 1.57, "length": 80.0,
                   "strength": 40.0 } ],
@@ -52,6 +54,12 @@ that is unique in the project. Links between objects use ids.
                   "max_angle": 2.4, "channels": [401, 402] } ]
 }
 ```
+
+A shape's own `fill` and `line` are colors, or null for none, and
+`line_width` is its full line width. A point's `curve` runs from 0 (a
+sharp corner) to about 0.55 (round), and its `width` scales the line
+width there, from pen pressure. Until styles arrive in M2, shapes carry
+only their own look and no `styles`.
 
 Lists are flat. Trees (layers, bones) use `parent` ids, and parents are
 written before children, so loading needs one forward pass. `parent: 0`

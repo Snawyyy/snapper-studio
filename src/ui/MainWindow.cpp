@@ -1,6 +1,7 @@
 #include "ui/MainWindow.h"
 
 #include <kddockwidgets/qtwidgets/views/DockWidget.h>
+#include <kddockwidgets/qtwidgets/views/MainWindow.h>
 
 #include <QWidget>
 
@@ -34,18 +35,24 @@ constexpr int kPanelMinHeight = 120;
 
 }  // namespace
 
-MainWindow::MainWindow(QWidget* parent)
-    : KDDockWidgets::QtWidgets::MainWindow(QStringLiteral("main-window"),
-                                           kWindowOptions, parent) {
-  setWindowTitle(QStringLiteral("Snapper Studio"));
-  resize(1280, 800);
+MainWindow::MainWindow()
+    : window_(std::make_unique<KDDockWidgets::QtWidgets::MainWindow>(
+          QStringLiteral("main-window"), kWindowOptions)) {
+  window_->setWindowTitle(QStringLiteral("Snapper Studio"));
+  window_->resize(1280, 800);
   auto* canvas = new QWidget();
   canvas->setObjectName(QStringLiteral("canvas"));
   canvas->setAttribute(Qt::WA_StyledBackground);
-  setPersistentCentralWidget(canvas);
+  window_->setPersistentCentralWidget(canvas);
   CreatePanels();
   ArrangeDefaultLayout();
 }
+
+MainWindow::~MainWindow() = default;
+
+QWidget* MainWindow::Widget() const { return window_.get(); }
+
+void MainWindow::Show() { window_->show(); }
 
 void MainWindow::CreatePanels() {
   for (int i = 0; i < kPanelCount; ++i) {
@@ -69,13 +76,13 @@ void MainWindow::ArrangeDefaultLayout() {
   const KDDockWidgets::InitialOption side_size(QSize(260, 0));
   const KDDockWidgets::InitialOption timeline_size(QSize(0, 180));
 
-  addDockWidget(panels_[kToolOptions], Location_OnLeft, nullptr, side_size);
-  addDockWidget(panels_[kLayers], Location_OnRight, nullptr, side_size);
+  window_->addDockWidget(panels_[kToolOptions], Location_OnLeft, nullptr, side_size);
+  window_->addDockWidget(panels_[kLayers], Location_OnRight, nullptr, side_size);
   panels_[kLayers]->addDockWidgetAsTab(panels_[kActions]);
-  addDockWidget(panels_[kStyles], Location_OnBottom, panels_[kLayers]);
+  window_->addDockWidget(panels_[kStyles], Location_OnBottom, panels_[kLayers]);
   panels_[kStyles]->addDockWidgetAsTab(panels_[kBrushes]);
-  addDockWidget(panels_[kTimeline], Location_OnBottom, nullptr,
-                timeline_size);
+  window_->addDockWidget(panels_[kTimeline], Location_OnBottom, nullptr,
+                         timeline_size);
   panels_[kToolOptions]->addDockWidgetAsTab(panels_[kHistory]);
   panels_[kLayers]->setAsCurrentTab();
   panels_[kStyles]->setAsCurrentTab();

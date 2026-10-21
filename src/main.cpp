@@ -22,6 +22,6 @@ int main(int argc, char* argv[]) {
   KDDockWidgets::initFrontend(KDDockWidgets::FrontendType::QtWidgets);
 
   snapper::MainWindow window;
-  window.show();
+  window.Show();
   return QApplication::exec();
 }

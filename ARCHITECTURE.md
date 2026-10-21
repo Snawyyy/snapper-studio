@@ -27,8 +27,8 @@ edits data directly: every change is a command that goes through undo.
 ### Data (the document)
 | Manager | Owns |
 |---|---|
-| `StyleManager` | Styles: fill, line color, width, brush id, effects. Tells listeners which shapes a style touches. |
-| `BrushManager` | Brush images and their settings (spacing, align to curve, jitter, boil interval). |
+| `StyleManager` | Styles: fill, line color, width and brush, each set or left to the shape. Resolves a shape's look from its own look and its two styles. |
+| `BrushManager` | Brushes and their settings (spacing, align to curve, turn, gap and size jitter, boil interval). Their pictures live in the image store with the imported pictures. |
 | `LayerManager` | The layer tree: vector, image, group, bone and switch layers, plus order, visibility and lock. |
 | `ShapeManager` | Vector layer contents: points, curves, shapes, and each shape's style ids. |
 | `SkeletonManager` | Bones of each bone layer: rest pose (frame 0), parent, length, strength (region size), constraints. |
@@ -59,7 +59,8 @@ frames it affects.
 |---|---|
 | `Renderer` | Draws a finished frame with `QPainter`: fills, plain lines, and hands brush lines to the brush stamper. |
 | `BrushStamper` | Stamps brush images along a line with spacing, turn and seeded jitter. The seed changes only on boil frames. |
-| `OverlayRenderer` | Draws the editing aids on top: bones, regions, selection, onion skin, mode border. |
+| `ArtCache` | Keeps the drawn artwork for the current view, so pen strokes and overlays never redraw every line. When drawing is slow, a moving view shows the old drawing moved along, drawn sharp once the view rests. |
+| `OverlayRenderer` | Draws the editing aids on top: bones, regions, selection, onion skin, mode border, and the shapes a style changes. |
 
 ### Editing
 | Manager | Job |
@@ -67,6 +68,8 @@ frames it affects.
 | `UndoManager` | Wraps `QUndoStack`. Every edit is a command with do and undo. Selection changes are commands too. History is saved with the project. |
 | `SelectionManager` | What's selected (ids), per kind: points, shapes, bones, layers, keys. |
 | `ToolManager` | The active tool, hold-to-switch, and handing pen events to the tool. Each tool is a class implementing a small `Tool` interface. |
+| `LookManager` | The look new shapes get, and look changes to the selected shapes (any shape with a selected point). With nothing selected, changes go to new shapes. |
+| `LayerActions`, `StyleActions`, `BrushActions` | Whole-object edits the panels and commands share: add, delete, rename, edit, import. Each builds commands for undo. |
 | `CommandRegistry` | Every user action by name, with its shortcut. It feeds menus, the Ctrl+K search and rebinding. |
 
 ### Around the app

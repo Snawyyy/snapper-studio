@@ -215,6 +215,7 @@ void ColorPopover::Close() {
   on_change_ = nullptr;
   anchor_ = nullptr;
   hide();
+  Q_EMIT Closed();
 }
 
 bool ColorPopover::IsOpenFor(const QWidget* anchor) const {

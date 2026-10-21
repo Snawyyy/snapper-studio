@@ -18,6 +18,7 @@ constexpr double kRadius = 6.0;
 ColorSwatch::ColorSwatch(ColorPopover& popover, QWidget* parent)
     : QAbstractButton(parent), popover_(popover) {
   setCursor(Qt::PointingHandCursor);
+  setFixedSize(kWidth, kHeight);
   connect(this, &QAbstractButton::clicked, this, [this] {
     if (popover_.IsOpenFor(this)) {
       popover_.Close();

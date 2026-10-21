@@ -14,17 +14,20 @@
 #include "edit/LayerActions.h"
 #include "edit/LookManager.h"
 #include "edit/SelectionManager.h"
+#include "edit/StyleActions.h"
 #include "edit/ToolManager.h"
 #include "edit/UndoManager.h"
 #include "edit/tools/PenTool.h"
 #include "edit/tools/SelectTool.h"
 #include "edit/tools/ShapeTool.h"
 #include "ui/CanvasView.h"
+#include "ui/ColorPopover.h"
 #include "ui/CommandBox.h"
 #include "ui/LayersPanel.h"
 #include "ui/MainWindow.h"
 #include "ui/PenOptions.h"
 #include "ui/StudyNoteBox.h"
+#include "ui/StylesPanel.h"
 #include "ui/ToolOptionsPanel.h"
 
 namespace snapper {
@@ -182,6 +185,17 @@ void Studio::CreatePanels() {
   layers->RegisterCommands(*commands_);
   window_->SetPanelContent(MainWindow::kLayers, layers);
   layer_actions_->RegisterCommands(*commands_);
+
+  const auto hint = [this](const QString& text) { window_->ShowHint(text); };
+  color_popover_ = new ColorPopover(window_->Widget());
+  style_actions_ =
+      std::make_unique<StyleActions>(*document_, *looks_, *undo_, hint);
+  style_actions_->RegisterCommands(*commands_);
+  auto* styles = new StylesPanel(*document_, *looks_, *style_actions_,
+                                 *color_popover_, theme_->CurrentTheme());
+  window_->SetPanelContent(MainWindow::kStyles, styles);
+  QObject::connect(styles, &StylesPanel::HighlightStyle, canvas_,
+                   &CanvasView::HighlightStyle);
 
   // Click a step to go back or forward to it.
   auto* history = new QUndoView(undo_->Stack());

@@ -4,6 +4,7 @@
 #include <QWidget>
 
 #include "app/Theme.h"
+#include "document/Ids.h"
 #include "render/ArtCache.h"
 #include "render/ViewTransform.h"
 #include "ui/ViewNavigator.h"
@@ -35,6 +36,8 @@ class CanvasView : public QWidget {
   void ActualSize();
   const ViewTransform& View() const { return view_; }
   void SetTools(ToolManager* tools);
+  // Outlines the shapes using the style, kNoId for none.
+  void HighlightStyle(Id style);
 
  protected:
   void paintEvent(QPaintEvent* event) override;
@@ -53,7 +56,6 @@ class CanvasView : public QWidget {
   bool event(QEvent* event) override;
 
  private:
-  void DrawSurround(QPainter& painter) const;
   void UpdateCursor();
   // The user moved the view, so resizing no longer refits it.
   void ViewMoved();
@@ -75,6 +77,7 @@ class CanvasView : public QWidget {
   ToolManager* tools_ = nullptr;
   bool is_tool_pressed_ = false;
   ArtCache art_;
+  Id highlighted_style_ = kNoId;
   // Runs while the view moves, and draws the art sharp again when it stops.
   QTimer view_settle_;
 };

@@ -4,7 +4,6 @@
 #include <QLineEdit>
 #include <QNativeGestureEvent>
 #include <QPainter>
-#include <QPainterPath>
 #include <QTabletEvent>
 #include <QWheelEvent>
 
@@ -12,6 +11,7 @@
 #include "document/Document.h"
 #include "edit/SelectionManager.h"
 #include "edit/ToolManager.h"
+#include "render/OverlayRenderer.h"
 
 namespace snapper {
 
@@ -19,10 +19,6 @@ namespace {
 
 constexpr double kFitMargin = 48.0;
 constexpr double kZoomStep = 1.25;
-// The area around the page covers artwork drawn off the page, faded.
-constexpr int kOffPageCoverAlpha = 170;
-constexpr int kShadowLayers = 4;
-constexpr int kShadowAlpha = 18;
 // How long the view must rest before slow art is drawn sharp again.
 constexpr int kViewSettleMs = 120;
 
@@ -96,6 +92,13 @@ void CanvasView::RegisterCommands(CommandRegistry& commands) {
   });
 }
 
+void CanvasView::HighlightStyle(Id style) {
+  if (style != highlighted_style_) {
+    highlighted_style_ = style;
+    update();
+  }
+}
+
 void CanvasView::SetTools(ToolManager* tools) {
   tools_ = tools;
   connect(tools_, &ToolManager::OverlayChanged, this, [this] { update(); });
@@ -142,35 +145,13 @@ void CanvasView::paintEvent(QPaintEvent* /*event*/) {
   painter.setRenderHint(QPainter::Antialiasing);
   art_.Draw(painter, document_, view_.ToScreenMatrix(), size(),
             devicePixelRatioF(), view_settle_.isActive());
-  DrawSurround(painter);
+  OverlayRenderer::DrawSurround(painter, document_, view_, rect(),
+                                theme_.canvas_surround);
+  OverlayRenderer::DrawStyleUsers(painter, document_, view_, highlighted_style_,
+                                  theme_.accent);
   if (tools_ != nullptr) {
     painter.setClipping(false);
     tools_->DrawOverlay(painter, view_);
-  }
-}
-
-// Fades artwork that lies off the page and draws a soft shadow round it.
-void CanvasView::DrawSurround(QPainter& painter) const {
-  const QSizeF size = document_.Canvas().size.toSizeF();
-  const QPolygonF page =
-      view_.ToScreenMatrix().map(QPolygonF(QRectF(QPointF(0, 0), size)));
-  QPainterPath outside;
-  outside.addRect(rect());
-  QPainterPath page_path;
-  page_path.addPolygon(page);
-  page_path.closeSubpath();
-
-  QColor cover = theme_.canvas_surround;
-  cover.setAlpha(kOffPageCoverAlpha);
-  const QPainterPath off_page = outside.subtracted(page_path);
-  painter.fillPath(off_page, cover);
-
-  // The shadow falls only outside the page.
-  painter.setClipPath(off_page);
-  painter.setBrush(Qt::NoBrush);
-  for (int i = 1; i <= kShadowLayers; ++i) {
-    painter.setPen(QPen(QColor(0, 0, 0, kShadowAlpha), i * 2.0));
-    painter.drawPolygon(page.translated(0, i * 0.5));
   }
 }
 

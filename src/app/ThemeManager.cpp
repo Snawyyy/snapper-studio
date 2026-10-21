@@ -213,6 +213,27 @@ QString ThemeManager::BuildStyleSheet() const {
              .arg(Css(t.hover), Css(t.pressed), Css(t.text_disabled),
                   Css(t.accent_pill));
   css += QStringLiteral(
+             "QComboBox { background: %1; color: %2; border: 1px solid %3;"
+             " border-radius: %4px; padding: 3px 8px; min-width: 72px; }\n"
+             "QComboBox:hover { background: %5; }\n"
+             "QComboBox:disabled { color: %6; }\n"
+             "QComboBox::drop-down { border: none; width: 16px; }\n"
+             "QComboBox QAbstractItemView { background: %1; color: %2;"
+             " border: 1px solid %3; selection-background-color: %7; }\n")
+             .arg(Css(t.raised), Css(t.text), Css(t.separator))
+             .arg(t.radius_control)
+             .arg(Css(t.hover), Css(t.text_disabled), Css(t.accent_pill));
+  css += QStringLiteral(
+             "QLabel#section-title { color: %1; font-size: %2px;"
+             " font-weight: 600; }\n"
+             "QFrame#separator { color: %3; background: %3; border: none;"
+             " max-height: 1px; }\n"
+             "QScrollArea, QScrollArea > QWidget > QWidget"
+             " { background: transparent; }\n")
+             .arg(Css(t.text_secondary))
+             .arg(t.font_small)
+             .arg(Css(t.separator));
+  css += QStringLiteral(
              "QLabel#secondary { color: %1; font-size: %2px; }\n"
              "QLabel#recording { color: %3; padding: 0 8px; }\n")
              .arg(Css(t.text_secondary))

@@ -7,6 +7,7 @@ class QWidget;
 namespace snapper {
 
 class CanvasView;
+class ColorPopover;
 class CommandBox;
 class CommandRegistry;
 class Document;
@@ -18,6 +19,7 @@ class SelectionManager;
 class SettingsManager;
 class StudyManager;
 class StudyNoteBox;
+class StyleActions;
 class ThemeManager;
 class ToolManager;
 class UndoManager;
@@ -61,6 +63,7 @@ class Studio {
   std::unique_ptr<LookManager> looks_;
   std::unique_ptr<ToolManager> tools_;
   std::unique_ptr<LayerActions> layer_actions_;
+  std::unique_ptr<StyleActions> style_actions_;
   std::unique_ptr<ProjectIo> project_;
   std::unique_ptr<StudyManager> study_;
   std::unique_ptr<MainWindow> window_;
@@ -68,6 +71,7 @@ class Studio {
   CanvasView* canvas_ = nullptr;
   CommandBox* command_box_ = nullptr;
   StudyNoteBox* note_box_ = nullptr;
+  ColorPopover* color_popover_ = nullptr;
 };
 
 }  // namespace snapper

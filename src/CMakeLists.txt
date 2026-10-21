@@ -29,6 +29,7 @@ target_sources(snapper_core PRIVATE
   edit/tools/ShapeTool.cpp edit/tools/ShapeTool.h
   edit/HitTest.cpp edit/HitTest.h
   edit/LookManager.cpp edit/LookManager.h
+  edit/StyleActions.cpp edit/StyleActions.h
   edit/MacroCommand.h
   edit/SelectionCommands.cpp edit/SelectionCommands.h
   edit/tools/SelectTool.cpp edit/tools/SelectTool.h
@@ -39,6 +40,7 @@ target_sources(snapper_core PRIVATE
   edit/UndoManager.cpp edit/UndoManager.h
   render/ArtCache.cpp render/ArtCache.h
   render/BrushStamper.cpp render/BrushStamper.h
+  render/OverlayRenderer.cpp render/OverlayRenderer.h
   render/Renderer.cpp render/Renderer.h
   render/ShapeGeometry.cpp render/ShapeGeometry.h
   render/ViewTransform.cpp render/ViewTransform.h
@@ -46,12 +48,17 @@ target_sources(snapper_core PRIVATE
   ui/ColorPopover.cpp ui/ColorPopover.h
   ui/ColorSwatch.cpp ui/ColorSwatch.h
   ui/CommandBox.cpp ui/CommandBox.h
+  ui/DragTagger.h
   ui/LayerRowDelegate.cpp ui/LayerRowDelegate.h
   ui/LayersPanel.cpp ui/LayersPanel.h
   ui/MainWindow.cpp ui/MainWindow.h
   ui/NumberField.cpp ui/NumberField.h
   ui/PenOptions.cpp ui/PenOptions.h
+  ui/LookCombos.cpp ui/LookCombos.h
+  ui/LookEditor.cpp ui/LookEditor.h
   ui/StudyNoteBox.cpp ui/StudyNoteBox.h
+  ui/StyleEditor.cpp ui/StyleEditor.h
+  ui/StylesPanel.cpp ui/StylesPanel.h
   ui/ToolOptionsPanel.cpp ui/ToolOptionsPanel.h
   ui/ViewNavigator.cpp ui/ViewNavigator.h
 )

@@ -32,6 +32,9 @@ class ColorPopover : public QFrame {
   void Close();
   bool IsOpenFor(const QWidget* anchor) const;
 
+ Q_SIGNALS:
+  void Closed();
+
  protected:
   bool eventFilter(QObject* watched, QEvent* event) override;
 

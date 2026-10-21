@@ -6,6 +6,7 @@ class QWidget;
 
 namespace snapper {
 
+class BrushActions;
 class CanvasView;
 class ColorPopover;
 class CommandBox;
@@ -64,6 +65,7 @@ class Studio {
   std::unique_ptr<ToolManager> tools_;
   std::unique_ptr<LayerActions> layer_actions_;
   std::unique_ptr<StyleActions> style_actions_;
+  std::unique_ptr<BrushActions> brush_actions_;
   std::unique_ptr<ProjectIo> project_;
   std::unique_ptr<StudyManager> study_;
   std::unique_ptr<MainWindow> window_;

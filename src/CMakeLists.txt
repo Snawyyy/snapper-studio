@@ -27,6 +27,7 @@ target_sources(snapper_core PRIVATE
   edit/tools/PenStroke.cpp edit/tools/PenStroke.h
   edit/tools/PenTool.cpp edit/tools/PenTool.h
   edit/tools/ShapeTool.cpp edit/tools/ShapeTool.h
+  edit/BrushActions.cpp edit/BrushActions.h
   edit/HitTest.cpp edit/HitTest.h
   edit/LookManager.cpp edit/LookManager.h
   edit/StyleActions.cpp edit/StyleActions.h
@@ -44,6 +45,8 @@ target_sources(snapper_core PRIVATE
   render/Renderer.cpp render/Renderer.h
   render/ShapeGeometry.cpp render/ShapeGeometry.h
   render/ViewTransform.cpp render/ViewTransform.h
+  ui/BrushesPanel.cpp ui/BrushesPanel.h
+  ui/BrushPreview.cpp ui/BrushPreview.h
   ui/CanvasView.cpp ui/CanvasView.h
   ui/ColorPopover.cpp ui/ColorPopover.h
   ui/ColorSwatch.cpp ui/ColorSwatch.h

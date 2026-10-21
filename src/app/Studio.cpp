@@ -11,6 +11,7 @@
 #include "app/StudyManager.h"
 #include "app/ThemeManager.h"
 #include "document/Document.h"
+#include "edit/BrushActions.h"
 #include "edit/LayerActions.h"
 #include "edit/LookManager.h"
 #include "edit/SelectionManager.h"
@@ -20,6 +21,7 @@
 #include "edit/tools/PenTool.h"
 #include "edit/tools/SelectTool.h"
 #include "edit/tools/ShapeTool.h"
+#include "ui/BrushesPanel.h"
 #include "ui/CanvasView.h"
 #include "ui/ColorPopover.h"
 #include "ui/CommandBox.h"
@@ -196,6 +198,18 @@ void Studio::CreatePanels() {
   window_->SetPanelContent(MainWindow::kStyles, styles);
   QObject::connect(styles, &StylesPanel::HighlightStyle, canvas_,
                    &CanvasView::HighlightStyle);
+
+  brush_actions_ =
+      std::make_unique<BrushActions>(*document_, *looks_, *undo_, hint);
+  auto* brushes =
+      new BrushesPanel(*document_, *brush_actions_, theme_->CurrentTheme());
+  window_->SetPanelContent(MainWindow::kBrushes, brushes);
+  commands_->Add({
+      .id = QStringLiteral("brush.import"),
+      .title = QStringLiteral("Import Brush"),
+      .shortcut = {},
+      .run = [brushes] { brushes->ImportBrush(); },
+  });
 
   // Click a step to go back or forward to it.
   auto* history = new QUndoView(undo_->Stack());

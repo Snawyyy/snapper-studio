@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "document/Document.h"
+#include "render/BrushStamper.h"
 #include "render/ShapeGeometry.h"
 
 namespace snapper {
@@ -15,7 +16,8 @@ void Renderer::DrawPage(QPainter& painter, const Document& document) {
                    canvas.background);
 }
 
-void Renderer::DrawLayers(QPainter& painter, const Document& document) {
+void Renderer::DrawLayers(QPainter& painter, const Document& document,
+                          int frame) {
   const std::vector<Layer>& layers = document.Layers().All();
   const std::vector<Shape>& shapes = document.Shapes().All();
 
@@ -38,7 +40,7 @@ void Renderer::DrawLayers(QPainter& painter, const Document& document) {
       continue;
     }
     for (const Shape* shape : by_layer[i]) {
-      DrawShape(painter, *shape);
+      DrawShape(painter, document, *shape, frame);
     }
   }
 }
@@ -57,13 +59,29 @@ void Renderer::DrawPicture(QPainter& painter, const Document& document,
   painter.restore();
 }
 
-void Renderer::DrawShape(QPainter& painter, const Shape& shape) {
-  const ShapeLook& look = shape.look;
+void Renderer::DrawShape(QPainter& painter, const Document& document,
+                         const Shape& shape, int frame) {
+  DrawShapeAs(painter, document, shape,
+              document.Styles().Resolve(shape.look, shape.styles), frame);
+}
+
+void Renderer::DrawShapeAs(QPainter& painter, const Document& document,
+                           const Shape& shape, const ShapeLook& look,
+                           int frame) {
   const bool has_fill = shape.closed && look.has_fill;
   if (has_fill) {
     painter.fillPath(ShapeGeometry::CenterLine(shape), look.fill);
   }
   if (!look.has_line) {
+    return;
+  }
+  // A brush whose picture is missing draws a plain line.
+  const Brush* brush = document.Brushes().Find(look.brush);
+  const QImage* picture =
+      brush == nullptr ? nullptr : document.Images().Find(brush->image);
+  if (picture != nullptr) {
+    BrushStamper::Draw(painter, shape, look.line_width, look.line, *brush,
+                       *picture, frame);
     return;
   }
   const bool is_even = ShapeGeometry::HasEvenWidth(shape);
@@ -73,7 +91,8 @@ void Renderer::DrawShape(QPainter& painter, const Shape& shape) {
                    Qt::RoundCap, Qt::RoundJoin);
     painter.strokePath(ShapeGeometry::CenterLine(shape), pen);
   } else {
-    painter.fillPath(ShapeGeometry::LineOutline(shape), look.line);
+    painter.fillPath(ShapeGeometry::LineOutline(shape, look.line_width),
+                     look.line);
   }
 }
 

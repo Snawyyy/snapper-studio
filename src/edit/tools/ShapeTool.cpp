@@ -87,7 +87,7 @@ void ShapeTool::DrawOverlay(QPainter& painter,
   painter.save();
   painter.setTransform(view.ToScreenMatrix());
   // Building without ids changes nothing in the document.
-  Renderer::DrawShape(painter, Build(DraggedRect(), false));
+  Renderer::DrawShape(painter, Context().document, Build(DraggedRect(), false));
   painter.restore();
 }
 

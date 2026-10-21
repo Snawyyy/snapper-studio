@@ -36,6 +36,7 @@ target_sources(snapper_core PRIVATE
   edit/ShapeCommands.cpp edit/ShapeCommands.h
   edit/StyleCommands.cpp edit/StyleCommands.h
   edit/UndoManager.cpp edit/UndoManager.h
+  render/BrushStamper.cpp render/BrushStamper.h
   render/Renderer.cpp render/Renderer.h
   render/ShapeGeometry.cpp render/ShapeGeometry.h
   render/ViewTransform.cpp render/ViewTransform.h

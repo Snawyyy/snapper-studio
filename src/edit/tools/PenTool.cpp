@@ -119,7 +119,7 @@ void PenTool::DrawOverlay(QPainter& painter, const ViewTransform& view) const {
   painter.save();
   if (stroke_ != nullptr) {
     painter.setTransform(view.ToScreenMatrix());
-    Renderer::DrawShape(painter, PreviewShape());
+    Renderer::DrawShape(painter, Context().document, PreviewShape());
   } else if (is_hovering_) {
     // The size of the line about to be drawn, outlined twice so it shows
     // on light and dark art alike.

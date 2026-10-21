@@ -24,11 +24,6 @@ struct Segment {
   float to_width = 1.0F;
 };
 
-struct Sample {
-  QPointF pos;
-  double half_width = 0.0;
-};
-
 int SegmentCount(const Shape& shape) {
   const int points = static_cast<int>(shape.points.size());
   return shape.closed ? points : points - 1;
@@ -87,9 +82,8 @@ QPointF CubicAt(const Segment& s, double t) {
          s.control2 * (3 * u * t * t) + s.to * (t * t * t);
 }
 
-std::vector<Sample> SampleLine(const Shape& shape) {
-  std::vector<Sample> samples;
-  const double half_line = shape.look.line_width / 2.0;
+std::vector<LineSample> SampleLine(const Shape& shape) {
+  std::vector<LineSample> samples;
   const int segments = SegmentCount(shape);
   for (int i = 0; i < segments; ++i) {
     const Segment s = SegmentAt(shape, i);
@@ -103,8 +97,7 @@ std::vector<Sample> SampleLine(const Shape& shape) {
     for (int step = first; step <= steps; ++step) {
       const double t = static_cast<double>(step) / steps;
       const double width = s.from_width + (s.to_width - s.from_width) * t;
-      samples.push_back(
-          {.pos = CubicAt(s, t), .half_width = half_line * width});
+      samples.push_back({.pos = CubicAt(s, t), .width = width});
     }
   }
   return samples;
@@ -112,7 +105,7 @@ std::vector<Sample> SampleLine(const Shape& shape) {
 
 // Points left of the line at every sample, then right of it on the way
 // back, so they go round the line once.
-QPolygonF Ribbon(const std::vector<Sample>& samples) {
+QPolygonF Ribbon(const std::vector<LineSample>& samples, double half_line) {
   const size_t count = samples.size();
   QPolygonF left;
   QPolygonF right;
@@ -124,8 +117,9 @@ QPolygonF Ribbon(const std::vector<Sample>& samples) {
     const bool has_direction = length > 1e-9;
     const QPointF normal =
         has_direction ? QPointF(-along.y(), along.x()) / length : QPointF();
-    left << samples[i].pos + normal * samples[i].half_width;
-    right.prepend(samples[i].pos - normal * samples[i].half_width);
+    const double half_width = half_line * samples[i].width;
+    left << samples[i].pos + normal * half_width;
+    right.prepend(samples[i].pos - normal * half_width);
   }
   left << right;
   return left;
@@ -163,22 +157,26 @@ QPainterPath ShapeGeometry::CenterLine(const Shape& shape) {
   return path;
 }
 
-QPainterPath ShapeGeometry::LineOutline(const Shape& shape) {
+std::vector<LineSample> ShapeGeometry::Walk(const Shape& shape) {
+  return SampleLine(shape);
+}
+
+QPainterPath ShapeGeometry::LineOutline(const Shape& shape, double line_width) {
   QPainterPath path;
   path.setFillRule(Qt::WindingFill);
-  const std::vector<Sample> samples = SampleLine(shape);
+  const std::vector<LineSample> samples = SampleLine(shape);
   if (samples.empty()) {
     return path;
   }
   // Circles run clockwise. The ribbon must too, or where they overlap the
   // winding cancels out and leaves holes.
-  QPolygonF ribbon = Ribbon(samples);
+  const double half_line = line_width / 2.0;
+  QPolygonF ribbon = Ribbon(samples, half_line);
   if (SignedArea(ribbon) < 0) {
     std::ranges::reverse(ribbon);
   }
   path.addPolygon(ribbon);
   // Round joins and ends: a circle at every point the shape is built on.
-  const double half_line = shape.look.line_width / 2.0;
   for (const Point& point : shape.points) {
     const double radius = half_line * point.width;
     path.addEllipse(point.pos, radius, radius);

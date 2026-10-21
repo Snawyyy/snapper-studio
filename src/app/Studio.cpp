@@ -8,6 +8,7 @@
 #include "app/SettingsManager.h"
 #include "app/ThemeManager.h"
 #include "document/Document.h"
+#include "edit/LayerActions.h"
 #include "edit/SelectionManager.h"
 #include "edit/ToolManager.h"
 #include "edit/UndoManager.h"
@@ -16,6 +17,7 @@
 #include "edit/tools/ShapeTool.h"
 #include "ui/CanvasView.h"
 #include "ui/CommandBox.h"
+#include "ui/LayersPanel.h"
 #include "ui/MainWindow.h"
 #include "ui/PenOptions.h"
 #include "ui/ShapeOptions.h"
@@ -65,7 +67,11 @@ Studio::Studio()
   document_->ResetToNew();
   canvas_ = new CanvasView(*document_, *selection_, theme_->CurrentTheme());
   window_ = std::make_unique<MainWindow>(canvas_);
+  layer_actions_ = std::make_unique<LayerActions>(
+      *document_, *selection_, *undo_,
+      [this](const QString& text) { window_->ShowHint(text); });
   CreateTools();
+  CreatePanels();
   command_box_ = new CommandBox(commands_.get(), window_->Widget());
   RegisterAppCommands();
   undo_->RegisterCommands(*commands_);
@@ -135,6 +141,14 @@ void Studio::CreateTools() {
   QObject::connect(tools_.get(), &ToolManager::Hint, window_->Widget(),
                    [this](const QString& text) { window_->ShowHint(text); });
   canvas_->SetTools(tools_.get());
+}
+
+void Studio::CreatePanels() {
+  auto* layers = new LayersPanel(*document_, *selection_, *layer_actions_,
+                                 theme_->CurrentTheme());
+  layers->RegisterCommands(*commands_);
+  window_->SetPanelContent(MainWindow::kLayers, layers);
+  layer_actions_->RegisterCommands(*commands_);
 }
 
 void Studio::RegisterAppCommands() {

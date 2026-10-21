@@ -66,4 +66,32 @@ class SetLayerVisibleCommand : public QUndoCommand {
   bool visible_;
 };
 
+class SetLayerLockedCommand : public QUndoCommand {
+ public:
+  SetLayerLockedCommand(Document& document, Id layer, bool locked);
+
+  void redo() override;
+  void undo() override;
+
+ private:
+  Document& document_;
+  Id layer_;
+  bool locked_;
+};
+
+// Moves a layer up or down the stack.
+class MoveLayerCommand : public QUndoCommand {
+ public:
+  MoveLayerCommand(Document& document, Id layer, int to_index);
+
+  void redo() override;
+  void undo() override;
+
+ private:
+  Document& document_;
+  Id layer_;
+  int from_index_;
+  int to_index_;
+};
+
 }  // namespace snapper

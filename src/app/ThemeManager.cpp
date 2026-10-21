@@ -202,6 +202,15 @@ QString ThemeManager::BuildStyleSheet() const {
              .arg(t.radius_control)
              .arg(Css(t.text), Css(t.hover));
   css += QStringLiteral(
+             "QPushButton { background: %1; color: %2; border: none;"
+             " border-radius: %3px; padding: 6px 12px; }\n"
+             "QPushButton:hover { background: %4; }\n"
+             "QPushButton:pressed { background: %5; }\n"
+             "QPushButton:disabled { color: %6; }\n")
+             .arg(Css(t.raised), Css(t.text))
+             .arg(t.radius_control)
+             .arg(Css(t.hover), Css(t.pressed), Css(t.text_disabled));
+  css += QStringLiteral(
              "QScrollBar { background: transparent; width: 10px;"
              " height: 10px; }\n"
              "QScrollBar::handle { background: %1; border-radius: 5px; }\n"

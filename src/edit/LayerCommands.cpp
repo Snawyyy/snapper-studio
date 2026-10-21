@@ -75,4 +75,30 @@ void SetLayerVisibleCommand::undo() {
   document_.Layers().SetVisible(layer_, !visible_);
 }
 
+SetLayerLockedCommand::SetLayerLockedCommand(Document& document, Id layer,
+                                             bool locked)
+    : QUndoCommand(locked ? QStringLiteral("Lock Layer")
+                          : QStringLiteral("Unlock Layer")),
+      document_(document),
+      layer_(layer),
+      locked_(locked) {}
+
+void SetLayerLockedCommand::redo() {
+  document_.Layers().SetLocked(layer_, locked_);
+}
+
+void SetLayerLockedCommand::undo() {
+  document_.Layers().SetLocked(layer_, !locked_);
+}
+
+MoveLayerCommand::MoveLayerCommand(Document& document, Id layer, int to_index)
+    : QUndoCommand(QStringLiteral("Move Layer")),
+      document_(document),
+      layer_(layer),
+      from_index_(document.Layers().IndexOf(layer)),
+      to_index_(to_index) {}
+
+void MoveLayerCommand::redo() { document_.Layers().Move(layer_, to_index_); }
+void MoveLayerCommand::undo() { document_.Layers().Move(layer_, from_index_); }
+
 }  // namespace snapper

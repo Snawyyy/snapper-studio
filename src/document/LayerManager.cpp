@@ -30,6 +30,22 @@ std::optional<RemovedLayer> LayerManager::Take(Id id) {
   return removed;
 }
 
+bool LayerManager::Move(Id id, int index) {
+  const int from = IndexOf(id);
+  if (from < 0) {
+    return false;
+  }
+  const int to = std::clamp(index, 0, Count() - 1);
+  if (to == from) {
+    return true;
+  }
+  const Layer layer = layers_[static_cast<size_t>(from)];
+  layers_.erase(layers_.begin() + from);
+  layers_.insert(layers_.begin() + to, layer);
+  Q_EMIT ListChanged();
+  return true;
+}
+
 void LayerManager::Clear() {
   layers_.clear();
   Q_EMIT ListChanged();

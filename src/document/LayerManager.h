@@ -42,6 +42,8 @@ class LayerManager : public QObject {
   // missing or repeated id, or a full list.
   bool Insert(const Layer& layer, int index);
   std::optional<RemovedLayer> Take(Id id);
+  // Moves a layer to a new index (clamped). False when no layer has the id.
+  bool Move(Id id, int index);
   void Clear();
 
   bool SetName(Id id, const QString& name);

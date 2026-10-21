@@ -10,6 +10,7 @@ class CanvasView;
 class CommandBox;
 class CommandRegistry;
 class Document;
+class LayerActions;
 class MainWindow;
 class SelectionManager;
 class SettingsManager;
@@ -37,6 +38,7 @@ class Studio {
  private:
   void RegisterAppCommands();
   void CreateTools();
+  void CreatePanels();
   void RestoreSession();
   void SaveSession();
 
@@ -47,6 +49,7 @@ class Studio {
   std::unique_ptr<UndoManager> undo_;
   std::unique_ptr<SelectionManager> selection_;
   std::unique_ptr<ToolManager> tools_;
+  std::unique_ptr<LayerActions> layer_actions_;
   std::unique_ptr<MainWindow> window_;
   // Both owned by the window.
   CanvasView* canvas_ = nullptr;

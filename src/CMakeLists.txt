@@ -20,6 +20,7 @@ target_sources(snapper_core PRIVATE
   edit/MacroCommand.h
   edit/SelectionCommands.cpp edit/SelectionCommands.h
   edit/tools/SelectTool.cpp edit/tools/SelectTool.h
+  edit/LayerActions.cpp edit/LayerActions.h
   edit/LayerCommands.cpp edit/LayerCommands.h
   edit/ShapeCommands.cpp edit/ShapeCommands.h
   edit/UndoManager.cpp edit/UndoManager.h
@@ -28,6 +29,8 @@ target_sources(snapper_core PRIVATE
   render/ViewTransform.cpp render/ViewTransform.h
   ui/CanvasView.cpp ui/CanvasView.h
   ui/CommandBox.cpp ui/CommandBox.h
+  ui/LayerRowDelegate.cpp ui/LayerRowDelegate.h
+  ui/LayersPanel.cpp ui/LayersPanel.h
   ui/MainWindow.cpp ui/MainWindow.h
   ui/NumberField.cpp ui/NumberField.h
   ui/PenOptions.cpp ui/PenOptions.h

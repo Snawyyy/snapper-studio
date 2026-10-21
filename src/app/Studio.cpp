@@ -8,10 +8,15 @@
 #include "app/SettingsManager.h"
 #include "app/ThemeManager.h"
 #include "document/Document.h"
+#include "edit/SelectionManager.h"
+#include "edit/ToolManager.h"
 #include "edit/UndoManager.h"
+#include "edit/tools/PenTool.h"
 #include "ui/CanvasView.h"
 #include "ui/CommandBox.h"
 #include "ui/MainWindow.h"
+#include "ui/PenOptions.h"
+#include "ui/ToolOptionsPanel.h"
 
 namespace snapper {
 
@@ -51,14 +56,18 @@ Studio::Studio()
       settings_(std::make_unique<SettingsManager>()),
       commands_(std::make_unique<CommandRegistry>()),
       document_(std::make_unique<Document>()),
-      undo_(std::make_unique<UndoManager>()) {
+      undo_(std::make_unique<UndoManager>()),
+      selection_(std::make_unique<SelectionManager>(*document_)),
+      tools_(std::make_unique<ToolManager>()) {
   document_->ResetToNew();
   canvas_ = new CanvasView(*document_, theme_->CurrentTheme());
   window_ = std::make_unique<MainWindow>(canvas_);
+  CreateTools();
   command_box_ = new CommandBox(commands_.get(), window_->Widget());
   RegisterAppCommands();
   undo_->RegisterCommands(*commands_);
   canvas_->RegisterCommands(*commands_);
+  tools_->RegisterCommands(*commands_);
   window_->RegisterCommands(*commands_);
   commands_->AttachShortcutsTo(window_->Widget());
   window_->Widget()->installEventFilter(
@@ -83,6 +92,32 @@ void Studio::RestoreSession() {
 void Studio::SaveSession() { settings_->SetPanelLayout(window_->SaveLayout()); }
 
 QWidget* Studio::Window() const { return window_->Widget(); }
+
+void Studio::CreateTools() {
+  const ToolContext context{
+      .document = *document_,
+      .undo = *undo_,
+      .selection = *selection_,
+      .hint = [this](const QString& text) { window_->ShowHint(text); },
+  };
+  auto* options = new ToolOptionsPanel();
+
+  auto pen = std::make_unique<PenTool>(context);
+  pen->SetSettings(settings_->Pen());
+  options->AddPage(pen->Info().id,
+                   new PenOptions(*pen, [this](const PenSettings& settings) {
+                     settings_->SetPen(settings);
+                   }));
+  tools_->Add(std::move(pen));
+
+  window_->SetPanelContent(MainWindow::kToolOptions, options);
+  options->ShowTool(tools_->ActiveId());
+  QObject::connect(tools_.get(), &ToolManager::ActiveChanged, options,
+                   &ToolOptionsPanel::ShowTool);
+  QObject::connect(tools_.get(), &ToolManager::Hint, window_->Widget(),
+                   [this](const QString& text) { window_->ShowHint(text); });
+  canvas_->SetTools(tools_.get());
+}
 
 void Studio::RegisterAppCommands() {
   commands_->Add({

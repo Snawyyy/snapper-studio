@@ -10,6 +10,9 @@
 //   click X Y [right]        click a point
 //   doubleclick X Y
 //   drag X1 Y1 X2 Y2         press, move in steps, release
+//   path X Y X Y ...         drag through every point, in steps
+//   pen X Y P X Y P ...      a pen stroke through every point, P is the
+//                            pressure from 0 to 100
 //   hover X Y                move the pointer
 //   key SEQUENCE             press keys, like Ctrl+K or Escape
 //   type TEXT                type text into the focused control
@@ -24,6 +27,7 @@
 #include <QPainter>
 #include <QPixmap>
 #include <QStandardPaths>
+#include <QTabletEvent>
 #include <QTest>
 #include <QTextStream>
 #include <QTimer>
@@ -116,6 +120,13 @@ class Driver : public QObject {
     return true;
   }
 
+  // Every number after the action, which must come in groups of `group`.
+  bool ReadAll(const Step& step, int group, std::vector<int>& out) {
+    const qsizetype count = step.words.size() - 1;
+    const bool is_whole = count >= qsizetype{2} * group && count % group == 0;
+    return is_whole && ReadInts(step, static_cast<int>(count), out);
+  }
+
   void RunNext() {
     const bool is_done = next_ >= steps_.size();
     if (is_done) {
@@ -142,6 +153,10 @@ class Driver : public QObject {
       QTest::mouseMove(Target(), QPoint(n[0], n[1]));
     } else if (action == u"drag" && ReadInts(step, 4, n)) {
       Drag(QPoint(n[0], n[1]), QPoint(n[2], n[3]));
+    } else if (action == u"path" && ReadAll(step, 2, n)) {
+      Path(n);
+    } else if (action == u"pen" && ReadAll(step, 3, n)) {
+      PenStroke(n);
     } else if (action == u"key" && step.words.size() > 1) {
       QTest::keySequence(Target(), QKeySequence(step.words[1]));
     } else if (action == u"type" && !step.rest.isEmpty()) {
@@ -182,6 +197,56 @@ class Driver : public QObject {
       QTest::mouseMove(target, point);
     }
     QTest::mouseRelease(target, Qt::LeftButton, {}, to);
+  }
+
+  void Path(const std::vector<int>& n) {
+    QWindow* target = Target();
+    const QPoint start(n[0], n[1]);
+    QTest::mouseMove(target, start);
+    QTest::mousePress(target, Qt::LeftButton, {}, start);
+    QPoint last = start;
+    for (size_t i = 2; i + 1 < n.size(); i += 2) {
+      const QPoint next(n[i], n[i + 1]);
+      for (int s = 1; s <= kDragSteps; ++s) {
+        QTest::mouseMove(target, last + (next - last) * s / kDragSteps);
+      }
+      last = next;
+    }
+    QTest::mouseRelease(target, Qt::LeftButton, {}, last);
+  }
+
+  // Sends pen events straight to the control under the pen, since the
+  // test library has no pen of its own.
+  void PenStroke(const std::vector<int>& n) {
+    const auto send = [this](QEvent::Type type, QPointF pos, double pressure) {
+      const QPoint window_pos = pos.toPoint();
+      QWidget* widget = window_->childAt(window_pos);
+      if (widget == nullptr) {
+        return;
+      }
+      const QPointF local = widget->mapFrom(window_, pos);
+      const Qt::MouseButtons buttons =
+          type == QEvent::TabletRelease ? Qt::NoButton : Qt::LeftButton;
+      QTabletEvent event(type, QPointingDevice::primaryPointingDevice(), local,
+                         window_->mapToGlobal(pos), pressure, 0, 0, 0, 0, 0, {},
+                         Qt::LeftButton, buttons);
+      QApplication::sendEvent(widget, &event);
+    };
+    QPointF last(n[0], n[1]);
+    double last_pressure = n[2] / 100.0;
+    send(QEvent::TabletPress, last, last_pressure);
+    for (size_t i = 3; i + 2 < n.size(); i += 3) {
+      const QPointF next(n[i], n[i + 1]);
+      const double pressure = n[i + 2] / 100.0;
+      for (int s = 1; s <= kDragSteps; ++s) {
+        const double t = static_cast<double>(s) / kDragSteps;
+        send(QEvent::TabletMove, last + (next - last) * t,
+             last_pressure + (pressure - last_pressure) * t);
+      }
+      last = next;
+      last_pressure = pressure;
+    }
+    send(QEvent::TabletRelease, last, last_pressure);
   }
 
   // The main window with every other visible window (floating panels,

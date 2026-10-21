@@ -47,7 +47,6 @@ class MainWindow {
   bool RestoreLayout(const QByteArray& layout);
   void ResetLayout();
 
- private:
   enum Panel : std::uint8_t {
     kToolOptions,
     kHistory,
@@ -58,6 +57,14 @@ class MainWindow {
     kTimeline,
   };
 
+  // Puts the content in a panel, inside the panel padding. Takes
+  // ownership.
+  void SetPanelContent(Panel panel, QWidget* content);
+
+  // A line in the status bar naming the next step. Empty clears it.
+  void ShowHint(const QString& text);
+
+ private:
   void CreatePanels();
   void ArrangeDefaultLayout();
   void ShowPanel(int panel);

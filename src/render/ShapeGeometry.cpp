@@ -43,17 +43,27 @@ const Point& PointAt(const Shape& shape, int index) {
   return shape.points[static_cast<size_t>(wrapped)];
 }
 
+// The unit direction of the line through a point, along its neighbors.
+QPointF TangentAt(const Point& before, const Point& after) {
+  const QPointF along = after.pos - before.pos;
+  const double length = std::hypot(along.x(), along.y());
+  return length < 1e-9 ? QPointF() : along / length;
+}
+
 // A cubic piece from point i to i + 1. Each end's handle runs along the
-// line between that point's neighbors, scaled by its curve value.
+// line between that point's neighbors. Its length is the point's curve
+// value times this segment's length, so a short segment next to a long
+// one never overshoots into a hook.
 Segment SegmentAt(const Shape& shape, int i) {
   const Point& before = PointAt(shape, i - 1);
   const Point& from = PointAt(shape, i);
   const Point& to = PointAt(shape, i + 1);
   const Point& after = PointAt(shape, i + 2);
+  const double length = QLineF(from.pos, to.pos).length();
   return Segment{
       .from = from.pos,
-      .control1 = from.pos + (to.pos - before.pos) * from.curve / 2,
-      .control2 = to.pos - (after.pos - from.pos) * to.curve / 2,
+      .control1 = from.pos + TangentAt(before, to) * (length * from.curve),
+      .control2 = to.pos - TangentAt(from, after) * (length * to.curve),
       .to = to.pos,
       .from_width = from.width,
       .to_width = to.width,

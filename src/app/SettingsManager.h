@@ -4,6 +4,8 @@
 
 #include <memory>
 
+#include "edit/tools/PenTool.h"
+
 class QSettings;
 
 namespace snapper {
@@ -28,6 +30,10 @@ class SettingsManager {
   // version.
   QByteArray PanelLayout() const;
   void SetPanelLayout(const QByteArray& layout);
+
+  // The pen's last settings, or its defaults on first run.
+  PenSettings Pen() const;
+  void SetPen(const PenSettings& pen);
 
  private:
   std::unique_ptr<QSettings> store_;

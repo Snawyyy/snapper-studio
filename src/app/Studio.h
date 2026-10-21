@@ -11,8 +11,10 @@ class CommandBox;
 class CommandRegistry;
 class Document;
 class MainWindow;
+class SelectionManager;
 class SettingsManager;
 class ThemeManager;
+class ToolManager;
 class UndoManager;
 
 // Owns every manager and the main window, and wires them together. The app
@@ -30,9 +32,11 @@ class Studio {
   CommandRegistry& Commands() { return *commands_; }
   Document& Doc() { return *document_; }
   UndoManager& Undo() { return *undo_; }
+  ToolManager& Tools() { return *tools_; }
 
  private:
   void RegisterAppCommands();
+  void CreateTools();
   void RestoreSession();
   void SaveSession();
 
@@ -41,6 +45,8 @@ class Studio {
   std::unique_ptr<CommandRegistry> commands_;
   std::unique_ptr<Document> document_;
   std::unique_ptr<UndoManager> undo_;
+  std::unique_ptr<SelectionManager> selection_;
+  std::unique_ptr<ToolManager> tools_;
   std::unique_ptr<MainWindow> window_;
   // Both owned by the window.
   CanvasView* canvas_ = nullptr;

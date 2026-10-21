@@ -9,6 +9,11 @@ target_sources(snapper_core PRIVATE
   document/Ids.h
   document/LayerManager.cpp document/LayerManager.h
   document/ShapeManager.cpp document/ShapeManager.h
+  edit/SelectionManager.cpp edit/SelectionManager.h
+  edit/Tool.h
+  edit/ToolManager.cpp edit/ToolManager.h
+  edit/tools/PenStroke.cpp edit/tools/PenStroke.h
+  edit/tools/PenTool.cpp edit/tools/PenTool.h
   edit/LayerCommands.cpp edit/LayerCommands.h
   edit/ShapeCommands.cpp edit/ShapeCommands.h
   edit/UndoManager.cpp edit/UndoManager.h
@@ -18,4 +23,7 @@ target_sources(snapper_core PRIVATE
   ui/CanvasView.cpp ui/CanvasView.h
   ui/CommandBox.cpp ui/CommandBox.h
   ui/MainWindow.cpp ui/MainWindow.h
+  ui/NumberField.cpp ui/NumberField.h
+  ui/PenOptions.cpp ui/PenOptions.h
+  ui/ToolOptionsPanel.cpp ui/ToolOptionsPanel.h
 )

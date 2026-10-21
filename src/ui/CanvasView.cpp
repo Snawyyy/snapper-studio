@@ -5,6 +5,7 @@
 #include <QNativeGestureEvent>
 #include <QPainter>
 #include <QPainterPath>
+#include <QTabletEvent>
 #include <QWheelEvent>
 
 #include <cmath>
@@ -12,6 +13,7 @@
 
 #include "app/CommandRegistry.h"
 #include "document/Document.h"
+#include "edit/ToolManager.h"
 #include "render/Renderer.h"
 
 namespace snapper {
@@ -80,6 +82,11 @@ void CanvasView::RegisterCommands(CommandRegistry& commands) {
   });
 }
 
+void CanvasView::SetTools(ToolManager* tools) {
+  tools_ = tools;
+  connect(tools_, &ToolManager::OverlayChanged, this, [this] { update(); });
+}
+
 void CanvasView::FitCanvas() {
   const QSizeF size = document_.Canvas().size.toSizeF();
   view_.Fit(QRectF(QPointF(0, 0), size), kFitMargin);
@@ -106,6 +113,10 @@ void CanvasView::paintEvent(QPaintEvent* /*event*/) {
   Renderer::DrawLayers(painter, document_);
   painter.resetTransform();
   DrawSurround(painter);
+  if (tools_ != nullptr) {
+    painter.setClipping(false);
+    tools_->DrawOverlay(painter, view_);
+  }
 }
 
 // Fades artwork that lies off the page and draws a soft shadow round it.
@@ -155,26 +166,55 @@ void CanvasView::wheelEvent(QWheelEvent* event) {
   event->accept();
 }
 
-void CanvasView::mousePressEvent(QMouseEvent* event) {
-  const bool is_middle = event->button() == Qt::MiddleButton;
-  const bool is_space_drag = space_held_ && event->button() == Qt::LeftButton;
-  const bool is_rotate =
-      is_space_drag && event->modifiers().testFlag(Qt::ShiftModifier);
+bool CanvasView::StartViewDrag(Qt::MouseButton button,
+                               Qt::KeyboardModifiers modifiers,
+                               const QPointF& pos) {
+  const bool is_middle = button == Qt::MiddleButton;
+  const bool is_space_drag = space_held_ && button == Qt::LeftButton;
+  const bool is_rotate = is_space_drag && modifiers.testFlag(Qt::ShiftModifier);
   if (is_rotate) {
     drag_ = Drag::kRotate;
   } else if (is_middle || is_space_drag) {
     drag_ = Drag::kPan;
+  } else {
+    return false;
   }
-  last_drag_pos_ = event->position();
+  last_drag_pos_ = pos;
   UpdateCursor();
+  return true;
+}
+
+ToolInput CanvasView::MakeInput(const QPointF& screen, float pressure,
+                                Qt::KeyboardModifiers modifiers) const {
+  return {.canvas = view_.ToCanvas(screen),
+          .screen = screen,
+          .pressure = pressure,
+          .modifiers = modifiers,
+          .canvas_per_screen = 1.0 / view_.Zoom()};
+}
+
+void CanvasView::mousePressEvent(QMouseEvent* event) {
+  const QPointF pos = event->position();
+  if (StartViewDrag(event->button(), event->modifiers(), pos)) {
+    return;
+  }
+  const bool is_tool_press =
+      event->button() == Qt::LeftButton && tools_ != nullptr;
+  if (is_tool_press) {
+    is_tool_pressed_ = true;
+    tools_->Press(MakeInput(pos, 1.0F, event->modifiers()));
+  }
 }
 
 void CanvasView::mouseMoveEvent(QMouseEvent* event) {
   const QPointF pos = event->position();
   if (drag_ == Drag::kPan) {
     view_.PanBy(pos - last_drag_pos_);
+    last_drag_pos_ = pos;
     update();
-  } else if (drag_ == Drag::kRotate) {
+    return;
+  }
+  if (drag_ == Drag::kRotate) {
     // Turns by the angle the pointer swept round the middle of the view.
     const QPointF middle = rect().toRectF().center();
     const QPointF from = last_drag_pos_ - middle;
@@ -182,17 +222,106 @@ void CanvasView::mouseMoveEvent(QMouseEvent* event) {
     const double radians =
         std::atan2(to.y(), to.x()) - std::atan2(from.y(), from.x());
     view_.RotateAt(middle, radians * 180.0 / std::numbers::pi);
+    last_drag_pos_ = pos;
     update();
+    return;
   }
-  last_drag_pos_ = pos;
+  if (tools_ == nullptr) {
+    return;
+  }
+  const ToolInput input = MakeInput(pos, 1.0F, event->modifiers());
+  if (is_tool_pressed_) {
+    tools_->Drag(input);
+  } else {
+    tools_->Hover(input);
+  }
 }
 
-void CanvasView::mouseReleaseEvent(QMouseEvent* /*event*/) {
-  drag_ = Drag::kNone;
-  UpdateCursor();
+void CanvasView::mouseReleaseEvent(QMouseEvent* event) {
+  if (drag_ != Drag::kNone) {
+    drag_ = Drag::kNone;
+    UpdateCursor();
+    return;
+  }
+  const bool is_tool_release =
+      is_tool_pressed_ && event->button() == Qt::LeftButton;
+  if (is_tool_release) {
+    is_tool_pressed_ = false;
+    tools_->Release(MakeInput(event->position(), 1.0F, event->modifiers()));
+  }
+}
+
+void CanvasView::mouseDoubleClickEvent(QMouseEvent* event) {
+  const bool is_tool_click =
+      event->button() == Qt::LeftButton && tools_ != nullptr && !space_held_;
+  if (is_tool_click) {
+    tools_->DoubleClick(MakeInput(event->position(), 1.0F, event->modifiers()));
+  }
+}
+
+// A pen gives pressure. Accepting its events stops Qt from also sending
+// them again as mouse events.
+void CanvasView::tabletEvent(QTabletEvent* event) {
+  const QPointF pos = event->position();
+  const auto pressure = static_cast<float>(event->pressure());
+  switch (event->type()) {
+    case QEvent::TabletPress: {
+      if (StartViewDrag(event->button(), event->modifiers(), pos)) {
+        break;
+      }
+      const bool is_tool_press =
+          tools_ != nullptr && event->button() == Qt::LeftButton;
+      if (is_tool_press) {
+        is_tool_pressed_ = true;
+        tools_->Press(MakeInput(pos, pressure, event->modifiers()));
+      }
+      break;
+    }
+    case QEvent::TabletMove: {
+      const bool is_not_for_tools = drag_ != Drag::kNone || tools_ == nullptr;
+      if (is_not_for_tools) {
+        // Pan and turn follow the same path as the mouse.
+        event->ignore();
+        return;
+      }
+      if (is_tool_pressed_) {
+        tools_->Drag(MakeInput(pos, pressure, event->modifiers()));
+      } else {
+        tools_->Hover(MakeInput(pos, pressure, event->modifiers()));
+      }
+      break;
+    }
+    case QEvent::TabletRelease:
+      if (drag_ != Drag::kNone) {
+        event->ignore();
+        return;
+      }
+      if (is_tool_pressed_) {
+        is_tool_pressed_ = false;
+        tools_->Release(MakeInput(pos, pressure, event->modifiers()));
+      }
+      break;
+    default:
+      event->ignore();
+      return;
+  }
+  event->accept();
+}
+
+void CanvasView::leaveEvent(QEvent* event) {
+  if (tools_ != nullptr) {
+    tools_->Leave();
+  }
+  QWidget::leaveEvent(event);
 }
 
 void CanvasView::keyPressEvent(QKeyEvent* event) {
+  const bool is_cancel = event->key() == Qt::Key_Escape && tools_ != nullptr;
+  if (is_cancel) {
+    is_tool_pressed_ = false;
+    tools_->Cancel();
+    return;
+  }
   const bool is_space = event->key() == Qt::Key_Space;
   if (!is_space) {
     QWidget::keyPressEvent(event);
@@ -206,6 +335,10 @@ void CanvasView::keyPressEvent(QKeyEvent* event) {
 }
 
 void CanvasView::keyReleaseEvent(QKeyEvent* event) {
+  const bool is_tool_key_up = !event->isAutoRepeat() && tools_ != nullptr;
+  if (is_tool_key_up) {
+    tools_->KeyReleased(event->key());
+  }
   const bool is_space = event->key() == Qt::Key_Space;
   if (!is_space) {
     QWidget::keyReleaseEvent(event);

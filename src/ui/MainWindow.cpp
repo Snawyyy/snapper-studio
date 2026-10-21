@@ -4,6 +4,8 @@
 #include <kddockwidgets/qtwidgets/views/DockWidget.h>
 #include <kddockwidgets/qtwidgets/views/MainWindow.h>
 
+#include <QStatusBar>
+#include <QVBoxLayout>
 #include <QWidget>
 
 #include "app/CommandRegistry.h"
@@ -35,6 +37,7 @@ const KDDockWidgets::MainWindowOptions kWindowOptions =
 
 constexpr int kPanelMinWidth = 220;
 constexpr int kPanelMinHeight = 120;
+constexpr int kPanelPadding = 16;
 
 }  // namespace
 
@@ -46,6 +49,7 @@ MainWindow::MainWindow(QWidget* canvas)
   window_->setPersistentCentralWidget(canvas);
   CreatePanels();
   ArrangeDefaultLayout();
+  window_->statusBar()->setSizeGripEnabled(false);
 }
 
 MainWindow::~MainWindow() = default;
@@ -70,6 +74,20 @@ void MainWindow::RegisterCommands(CommandRegistry& commands) {
       .shortcut = {},
       .run = [this] { ResetLayout(); },
   });
+}
+
+void MainWindow::SetPanelContent(Panel panel, QWidget* content) {
+  auto* holder = new QWidget();
+  holder->setMinimumSize(kPanelMinWidth, kPanelMinHeight);
+  auto* layout = new QVBoxLayout(holder);
+  layout->setContentsMargins(kPanelPadding, kPanelPadding, kPanelPadding,
+                             kPanelPadding);
+  layout->addWidget(content);
+  panels_[panel]->setWidget(holder);
+}
+
+void MainWindow::ShowHint(const QString& text) {
+  window_->statusBar()->showMessage(text);
 }
 
 QByteArray MainWindow::SaveLayout() const {

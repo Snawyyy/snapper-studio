@@ -2,6 +2,7 @@
 
 #include <QPainter>
 #include <QPainterPath>
+#include <QPainterPathStroker>
 
 #include "document/Document.h"
 #include "render/ShapeGeometry.h"
@@ -15,7 +16,9 @@ namespace {
 constexpr int kOffPageCoverAlpha = 170;
 constexpr int kShadowLayers = 4;
 constexpr int kShadowAlpha = 18;
-constexpr double kHighlightWidth = 2.0;
+constexpr double kHighlightWidth = 1.5;
+// Screen pixels between a line's edge and its highlight ring.
+constexpr double kHighlightGap = 3.0;
 
 }  // namespace
 
@@ -47,6 +50,8 @@ void OverlayRenderer::DrawSurround(QPainter& painter, const Document& document,
   painter.restore();
 }
 
+// A ring round each line, never over it, so the change itself stays in
+// plain sight.
 void OverlayRenderer::DrawStyleUsers(QPainter& painter,
                                      const Document& document,
                                      const ViewTransform& view, Id style,
@@ -62,9 +67,17 @@ void OverlayRenderer::DrawStyleUsers(QPainter& painter,
     const Shape* shape = document.Shapes().Find(id);
     const Layer* layer = document.Layers().Find(shape->layer);
     const bool is_shown = layer != nullptr && layer->visible;
-    if (is_shown) {
-      painter.drawPath(to_screen.map(ShapeGeometry::CenterLine(*shape)));
+    if (!is_shown) {
+      continue;
     }
+    const ShapeLook look =
+        document.Styles().Resolve(shape->look, shape->styles);
+    QPainterPathStroker stroker;
+    stroker.setWidth(look.line_width * view.Zoom() + 2 * kHighlightGap);
+    stroker.setJoinStyle(Qt::RoundJoin);
+    stroker.setCapStyle(Qt::RoundCap);
+    const QPainterPath line = to_screen.map(ShapeGeometry::CenterLine(*shape));
+    painter.drawPath(stroker.createStroke(line).simplified());
   }
   painter.restore();
 }

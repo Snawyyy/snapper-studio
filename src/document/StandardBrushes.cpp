@@ -38,8 +38,9 @@ QByteArray Draw(
     for (int x = 0; x < kTipSize; ++x) {
       const double alpha =
           std::clamp(coverage(x, y, x - kTipCenter, y - kTipCenter), 0.0, 1.0);
-      image.setPixel(x, y,
-                     qRgba(255, 255, 255, static_cast<int>(alpha * 255 + 0.5)));
+      image.setPixel(
+          x, y,
+          qRgba(255, 255, 255, static_cast<int>(std::lround(alpha * 255))));
     }
   }
   QByteArray bytes;

@@ -28,7 +28,7 @@ class StyleManagerTest : public QObject {
     QVERIFY(!styles.Insert(Named(snapper::kNoId, "none"), 0));
     QCOMPARE(styles.IndexOf(2), 0);
 
-    QSignalSpy changed(&styles, &StyleManager::StyleChanged);
+    const QSignalSpy changed(&styles, &StyleManager::StyleChanged);
     Style renamed = *styles.Find(1);
     renamed.name = QStringLiteral("skin");
     QVERIFY(styles.Set(renamed));
@@ -36,9 +36,9 @@ class StyleManagerTest : public QObject {
     QCOMPARE(styles.Find(1)->name, QStringLiteral("skin"));
     QVERIFY(!styles.Set(Named(9, "missing")));
 
-    const auto removed = styles.Take(2);
-    QVERIFY(removed.has_value());
-    QCOMPARE(removed->index, 0);
+    const snapper::RemovedStyle removed =
+        styles.Take(2).value_or(snapper::RemovedStyle{.index = -1});
+    QCOMPARE(removed.index, 0);
     QCOMPARE(styles.Count(), 1);
   }
 

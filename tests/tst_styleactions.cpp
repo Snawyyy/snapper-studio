@@ -65,6 +65,7 @@ class StyleActionsTest : public QObject {
     Fixture f;
     const Id ink = f.document.Styles().All().front().id;
     std::vector<Id> lines;
+    lines.reserve(3);
     for (int i = 0; i < 3; ++i) {
       lines.push_back(f.AddLine());
     }

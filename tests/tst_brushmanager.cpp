@@ -25,7 +25,7 @@ class BrushManagerTest : public QObject {
   void SetChangesSettingsAndSignals() {
     BrushManager brushes;
     brushes.Insert({.id = 4, .name = QStringLiteral("a")}, 0);
-    QSignalSpy changed(&brushes, &BrushManager::BrushChanged);
+    const QSignalSpy changed(&brushes, &BrushManager::BrushChanged);
     QVERIFY(brushes.Set({.id = 4, .spacing = 9.0F, .size_jitter = 0.5F}));
     QCOMPARE(changed.count(), 1);
     QCOMPARE(brushes.Find(4)->spacing, Brush::kMaxSpacing);

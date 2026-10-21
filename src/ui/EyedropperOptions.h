@@ -4,6 +4,7 @@
 
 #include "edit/tools/EyedropperTool.h"
 
+class QButtonGroup;
 class QPushButton;
 
 namespace snapper {
@@ -23,6 +24,7 @@ class EyedropperOptions : public QWidget {
   EyedropperTool& tool_;
   QPushButton* color_;
   QPushButton* style_;
+  QButtonGroup* group_;
 };
 
 }  // namespace snapper

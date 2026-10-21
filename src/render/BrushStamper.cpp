@@ -57,7 +57,8 @@ std::vector<BrushStamp> BrushStamper::Plan(const Shape& shape,
                                            const Brush& brush, int frame) {
   std::vector<BrushStamp> stamps;
   const std::vector<LineSample> samples = ShapeGeometry::Walk(shape);
-  if (samples.empty() || line_width <= 0) {
+  const bool has_line = !samples.empty() && line_width > 0;
+  if (!has_line) {
     return stamps;
   }
   Random random(SeedFor(shape.id, brush, frame));
@@ -136,7 +137,8 @@ void BrushStamper::Draw(QPainter& painter, const Shape& shape,
                         double line_width, const QColor& color,
                         const Brush& brush, const QImage& picture, int frame) {
   const std::vector<BrushStamp> stamps = Plan(shape, line_width, brush, frame);
-  if (stamps.empty() || picture.isNull()) {
+  const bool has_stamps = !stamps.empty() && !picture.isNull();
+  if (!has_stamps) {
     return;
   }
   const QTransform base = painter.worldTransform();

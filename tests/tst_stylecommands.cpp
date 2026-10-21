@@ -107,7 +107,7 @@ class StyleCommandsTest : public QObject {
     document.ResetToNew();
     UndoManager undo;
     const Id shape = AddLine(document, {}, snapper::kNoId);
-    auto before = snapper::LookStatesOf(document.Shapes(), {shape});
+    const auto before = snapper::LookStatesOf(document.Shapes(), {shape});
     auto after = before;
     after[0].look.line = Qt::red;
     undo.Push(std::make_unique<snapper::SetShapeLooksCommand>(

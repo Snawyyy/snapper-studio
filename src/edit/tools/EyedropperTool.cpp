@@ -20,7 +20,8 @@ constexpr double kSampleOffset = 22.0;
 std::optional<QColor> PixelAt(const Document& document, const Layer& layer,
                               const QPointF& canvas) {
   const QImage* image = document.Images().Find(layer.image);
-  if (image == nullptr || layer.image_scale <= 0) {
+  const bool has_picture = image != nullptr && layer.image_scale > 0;
+  if (!has_picture) {
     return std::nullopt;
   }
   const QPointF at = (canvas - layer.image_pos) / layer.image_scale;

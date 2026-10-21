@@ -76,9 +76,13 @@ class EyedropperTest : public QObject {
   // New shapes take their line color from the default style.
   void LineColorFromAStyleSaysSo() {
     Fixture f;
-    const auto pick = f.tool.PickAt(f.At(QPointF(50, 20)));
-    QVERIFY(pick.has_value());
-    QCOMPARE(pick->kind, EyedropperTool::Pick::Kind::kLine);
+    const EyedropperTool::Pick pick =
+        f.tool.PickAt(f.At(QPointF(50, 20)))
+            .value_or(
+                EyedropperTool::Pick{.kind = EyedropperTool::Pick::Kind::kFill,
+                                     .color = {},
+                                     .shape = std::nullopt});
+    QCOMPARE(pick.kind, EyedropperTool::Pick::Kind::kLine);
     f.tool.Press(f.At(QPointF(50, 20)));
     QVERIFY(f.hint.contains(QStringLiteral("Ink")));
   }
@@ -125,10 +129,10 @@ class EyedropperTest : public QObject {
                                 .image_pos = QPointF(100, 100),
                                 .image_scale = 2.0},
                                f.document.Layers().Count());
-    const auto pick = f.tool.PickAt(f.At(QPointF(115, 115)));
-    QVERIFY(pick.has_value());
-    QCOMPARE(pick->kind, EyedropperTool::Pick::Kind::kPicture);
-    QCOMPARE(pick->color, QColor(Qt::blue));
+    const EyedropperTool::Pick pick =
+        f.tool.PickAt(f.At(QPointF(115, 115))).value_or(EyedropperTool::Pick{});
+    QCOMPARE(pick.kind, EyedropperTool::Pick::Kind::kPicture);
+    QCOMPARE(pick.color, QColor(Qt::blue));
     QVERIFY(!f.tool.PickAt(f.At(QPointF(150, 30))).has_value());
   }
 };

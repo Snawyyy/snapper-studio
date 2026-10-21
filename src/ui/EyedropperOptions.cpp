@@ -12,11 +12,11 @@ EyedropperOptions::EyedropperOptions(EyedropperTool& tool, QWidget* parent)
     : QWidget(parent),
       tool_(tool),
       color_(new QPushButton(QStringLiteral("Color"), this)),
-      style_(new QPushButton(QStringLiteral("Whole style"), this)) {
-  auto* group = new QButtonGroup(this);
+      style_(new QPushButton(QStringLiteral("Whole style"), this)),
+      group_(new QButtonGroup(this)) {
   for (QPushButton* button : {color_, style_}) {
     button->setCheckable(true);
-    group->addButton(button);
+    group_->addButton(button);
   }
   color_->setObjectName(QStringLiteral("eyedropper-color"));
   style_->setObjectName(QStringLiteral("eyedropper-style"));

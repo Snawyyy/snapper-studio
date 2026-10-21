@@ -8,12 +8,14 @@ target_sources(snapper_core PRIVATE
   app/StudyManager.cpp app/StudyManager.h
   app/ThemeManager.cpp app/ThemeManager.h
   app/ZipArchive.cpp app/ZipArchive.h
+  document/BrushManager.cpp document/BrushManager.h
   document/Document.cpp document/Document.h
   document/Ids.h
   document/ProjectJson.cpp document/ProjectJson.h
   document/ImageStore.cpp document/ImageStore.h
   document/LayerManager.cpp document/LayerManager.h
   document/ShapeLook.h
+  document/StandardBrushes.cpp document/StandardBrushes.h
   document/ShapeManager.cpp document/ShapeManager.h
   document/StyleManager.cpp document/StyleManager.h
   edit/SelectionManager.cpp edit/SelectionManager.h

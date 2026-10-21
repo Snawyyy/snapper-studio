@@ -8,9 +8,6 @@
 #include <QTabletEvent>
 #include <QWheelEvent>
 
-#include <cmath>
-#include <numbers>
-
 #include "app/CommandRegistry.h"
 #include "document/Document.h"
 #include "edit/SelectionManager.h"
@@ -22,8 +19,6 @@ namespace snapper {
 namespace {
 
 constexpr double kFitMargin = 48.0;
-// One wheel notch (120 units) zooms by about 19%.
-constexpr double kZoomPerWheelUnit = 1.0015;
 constexpr double kZoomStep = 1.25;
 // The area around the page covers artwork drawn off the page, faded.
 constexpr int kOffPageCoverAlpha = 170;
@@ -115,20 +110,17 @@ void CanvasView::FitSelection() {
   } else {
     view_.Fit(*bounds, kFitMargin);
   }
-  is_fit_view_ = false;
-  update();
+  ViewMoved();
 }
 
 void CanvasView::ZoomAround(double factor) {
   view_.ZoomAt(rect().center(), factor);
-  is_fit_view_ = false;
-  update();
+  ViewMoved();
 }
 
 void CanvasView::ActualSize() {
   view_.ResetZoom();
-  is_fit_view_ = false;
-  update();
+  ViewMoved();
 }
 
 void CanvasView::paintEvent(QPaintEvent* /*event*/) {
@@ -191,28 +183,23 @@ void CanvasView::showEvent(QShowEvent* event) {
 }
 
 void CanvasView::wheelEvent(QWheelEvent* event) {
-  const double units = event->angleDelta().y();
-  view_.ZoomAt(event->position(), std::pow(kZoomPerWheelUnit, units));
+  navigator_.Wheel(event->position(), event->angleDelta().y());
+  ViewMoved();
+  event->accept();
+}
+
+void CanvasView::ViewMoved() {
   is_fit_view_ = false;
   update();
-  event->accept();
 }
 
 bool CanvasView::StartViewDrag(Qt::MouseButton button,
                                Qt::KeyboardModifiers modifiers,
                                const QPointF& pos) {
-  const bool is_middle = button == Qt::MiddleButton;
-  const bool is_space_drag = space_held_ && button == Qt::LeftButton;
-  const bool is_rotate = is_space_drag && modifiers.testFlag(Qt::ShiftModifier);
-  if (is_rotate) {
-    drag_ = Drag::kRotate;
-  } else if (is_middle || is_space_drag) {
-    drag_ = Drag::kPan;
-  } else {
+  if (!navigator_.StartDrag(button, modifiers, pos)) {
     return false;
   }
-  is_fit_view_ = false;
-  last_drag_pos_ = pos;
+  ViewMoved();
   UpdateCursor();
   return true;
 }
@@ -242,21 +229,8 @@ void CanvasView::mousePressEvent(QMouseEvent* event) {
 
 void CanvasView::mouseMoveEvent(QMouseEvent* event) {
   const QPointF pos = event->position();
-  if (drag_ == Drag::kPan) {
-    view_.PanBy(pos - last_drag_pos_);
-    last_drag_pos_ = pos;
-    update();
-    return;
-  }
-  if (drag_ == Drag::kRotate) {
-    // Turns by the angle the pointer swept round the middle of the view.
-    const QPointF middle = rect().toRectF().center();
-    const QPointF from = last_drag_pos_ - middle;
-    const QPointF to = pos - middle;
-    const double radians =
-        std::atan2(to.y(), to.x()) - std::atan2(from.y(), from.x());
-    view_.RotateAt(middle, radians * 180.0 / std::numbers::pi);
-    last_drag_pos_ = pos;
+  if (navigator_.IsDragging()) {
+    navigator_.DragTo(pos, rect().toRectF());
     update();
     return;
   }
@@ -272,8 +246,8 @@ void CanvasView::mouseMoveEvent(QMouseEvent* event) {
 }
 
 void CanvasView::mouseReleaseEvent(QMouseEvent* event) {
-  if (drag_ != Drag::kNone) {
-    drag_ = Drag::kNone;
+  if (navigator_.IsDragging()) {
+    navigator_.EndDrag();
     UpdateCursor();
     return;
   }
@@ -286,8 +260,8 @@ void CanvasView::mouseReleaseEvent(QMouseEvent* event) {
 }
 
 void CanvasView::mouseDoubleClickEvent(QMouseEvent* event) {
-  const bool is_tool_click =
-      event->button() == Qt::LeftButton && tools_ != nullptr && !space_held_;
+  const bool is_tool_click = event->button() == Qt::LeftButton &&
+                             tools_ != nullptr && !navigator_.IsSpaceHeld();
   if (is_tool_click) {
     tools_->DoubleClick(MakeInput(event->position(), 1.0F, event->modifiers()));
   }
@@ -312,7 +286,8 @@ void CanvasView::tabletEvent(QTabletEvent* event) {
       break;
     }
     case QEvent::TabletMove: {
-      const bool is_not_for_tools = drag_ != Drag::kNone || tools_ == nullptr;
+      const bool is_not_for_tools =
+          navigator_.IsDragging() || tools_ == nullptr;
       if (is_not_for_tools) {
         // Pan and turn follow the same path as the mouse.
         event->ignore();
@@ -326,7 +301,7 @@ void CanvasView::tabletEvent(QTabletEvent* event) {
       break;
     }
     case QEvent::TabletRelease:
-      if (drag_ != Drag::kNone) {
+      if (navigator_.IsDragging()) {
         event->ignore();
         return;
       }
@@ -367,7 +342,7 @@ void CanvasView::keyPressEvent(QKeyEvent* event) {
     return;
   }
   if (!event->isAutoRepeat()) {
-    space_held_ = true;
+    navigator_.SetSpaceHeld(true);
     UpdateCursor();
   }
   event->accept();
@@ -384,7 +359,7 @@ void CanvasView::keyReleaseEvent(QKeyEvent* event) {
     return;
   }
   if (!event->isAutoRepeat()) {
-    space_held_ = false;
+    navigator_.SetSpaceHeld(false);
     UpdateCursor();
   }
   event->accept();
@@ -401,40 +376,25 @@ void CanvasView::enterEvent(QEnterEvent* event) {
   QWidget::enterEvent(event);
 }
 
+// Trackpad pinch zooms and two finger twist turns, toward the fingers.
 bool CanvasView::event(QEvent* event) {
   const bool is_gesture = event->type() == QEvent::NativeGesture;
-  if (is_gesture) {
-    HandleGesture(event);
-    return true;
+  if (!is_gesture) {
+    return QWidget::event(event);
   }
-  return QWidget::event(event);
-}
-
-// Trackpad pinch zooms and two finger twist turns, toward the fingers.
-void CanvasView::HandleGesture(QEvent* event) {
   const auto* gesture = static_cast<QNativeGestureEvent*>(event);
-  const QPointF pos = gesture->position();
-  switch (gesture->gestureType()) {
-    case Qt::ZoomNativeGesture:
-      view_.ZoomAt(pos, 1.0 + gesture->value());
-      break;
-    case Qt::RotateNativeGesture:
-      view_.RotateAt(pos, gesture->value());
-      break;
-    default:
-      return;
+  const bool is_used = navigator_.Gesture(
+      gesture->gestureType(), gesture->value(), gesture->position());
+  if (is_used) {
+    ViewMoved();
   }
-  is_fit_view_ = false;
-  update();
+  return true;
 }
 
 void CanvasView::UpdateCursor() {
-  if (drag_ == Drag::kRotate) {
-    setCursor(Qt::SizeAllCursor);
-  } else if (drag_ == Drag::kPan) {
-    setCursor(Qt::ClosedHandCursor);
-  } else if (space_held_) {
-    setCursor(Qt::OpenHandCursor);
+  const std::optional<Qt::CursorShape> cursor = navigator_.Cursor();
+  if (cursor.has_value()) {
+    setCursor(*cursor);
   } else {
     unsetCursor();
   }

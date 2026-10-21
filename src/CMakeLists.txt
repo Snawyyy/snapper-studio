@@ -42,4 +42,5 @@ target_sources(snapper_core PRIVATE
   ui/ShapeOptions.cpp ui/ShapeOptions.h
   ui/StudyNoteBox.cpp ui/StudyNoteBox.h
   ui/ToolOptionsPanel.cpp ui/ToolOptionsPanel.h
+  ui/ViewNavigator.cpp ui/ViewNavigator.h
 )

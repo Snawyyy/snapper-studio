@@ -5,6 +5,10 @@ target_sources(snapper_core PRIVATE
   app/Studio.cpp app/Studio.h
   app/Theme.h
   app/ThemeManager.cpp app/ThemeManager.h
+  document/Document.cpp document/Document.h
+  document/Ids.h
+  document/LayerManager.cpp document/LayerManager.h
+  document/ShapeManager.cpp document/ShapeManager.h
   ui/CommandBox.cpp ui/CommandBox.h
   ui/MainWindow.cpp ui/MainWindow.h
 )

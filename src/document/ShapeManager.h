@@ -32,7 +32,18 @@ struct Shape {
   Id layer = kNoId;
   std::vector<Point> points;
   bool closed = false;
+  // Its own look, which its styles draw over.
   ShapeLook look{};
+  StylePair styles{};
+};
+
+// A shape's own look and its styles, set together.
+struct ShapeLookState {
+  Id shape = kNoId;
+  ShapeLook look{};
+  StylePair styles{};
+
+  bool operator==(const ShapeLookState&) const = default;
 };
 
 struct RemovedShape {
@@ -65,6 +76,9 @@ class ShapeManager : public QObject {
 
   // Moves points. Unknown ids are skipped. Returns how many moved.
   int SetPositions(const std::vector<PointPosition>& positions);
+  // Sets shapes' own looks and styles. Unknown ids are skipped. Returns how
+  // many changed.
+  int SetLooks(const std::vector<ShapeLookState>& looks);
 
   const Shape* Find(Id id) const;
   int IndexOf(Id id) const;
@@ -76,9 +90,15 @@ class ShapeManager : public QObject {
   int PointCount() const { return static_cast<int>(point_index_.size()); }
   const std::vector<Shape>& All() const { return shapes_; }
   std::vector<Id> ShapesOn(Id layer) const;
+  // Every shape naming the style as one of its two.
+  std::vector<Id> ShapesWithStyle(Id style) const;
+  // Every shape whose own look names the brush. Styles naming it are the
+  // style manager's to tell.
+  std::vector<Id> ShapesWithBrush(Id brush) const;
 
  Q_SIGNALS:
-  // Something on this layer changed: shapes added, removed, or moved.
+  // Something on this layer changed: shapes added, removed, moved, or
+  // restyled.
   void LayerContentChanged(Id layer);
 
  private:

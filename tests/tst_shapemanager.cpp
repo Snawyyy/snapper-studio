@@ -61,6 +61,25 @@ class ShapeManagerTest : public QObject {
     QCOMPARE(spy.count(), 1);
   }
 
+  void SetsLooksAndFindsStyleUsers() {
+    ShapeManager shapes;
+    shapes.Insert(Line(1, 10), 0);
+    shapes.Insert(Line(2, 20), 1);
+    snapper::ShapeLook look;
+    look.line = Qt::red;
+    look.brush = 7;
+    const QSignalSpy spy(&shapes, &ShapeManager::LayerContentChanged);
+    const int changed = shapes.SetLooks(
+        {{.shape = 2, .look = look, .styles = {5, snapper::kNoId}},
+         {.shape = 99, .look = {}, .styles = {}}});
+    QCOMPARE(changed, 1);
+    QCOMPARE(spy.count(), 1);
+    QCOMPARE(shapes.Find(2)->look.line, QColor(Qt::red));
+    QCOMPARE(shapes.ShapesWithStyle(5), std::vector<snapper::Id>{2});
+    QVERIFY(shapes.ShapesWithStyle(snapper::kNoId).empty());
+    QCOMPARE(shapes.ShapesWithBrush(7), std::vector<snapper::Id>{2});
+  }
+
   void TakeForgetsItsPoints() {
     ShapeManager shapes;
     shapes.Insert(Line(1, 10), 0);

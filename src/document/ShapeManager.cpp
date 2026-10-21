@@ -75,6 +75,26 @@ int ShapeManager::SetPositions(const std::vector<PointPosition>& positions) {
   return moved;
 }
 
+int ShapeManager::SetLooks(const std::vector<ShapeLookState>& looks) {
+  QSet<Id> layers;
+  int changed = 0;
+  for (const ShapeLookState& state : looks) {
+    const int index = IndexOf(state.shape);
+    if (index < 0) {
+      continue;
+    }
+    Shape& shape = shapes_[static_cast<size_t>(index)];
+    shape.look = state.look;
+    shape.styles = state.styles;
+    layers.insert(shape.layer);
+    ++changed;
+  }
+  for (const Id layer : layers) {
+    Q_EMIT LayerContentChanged(layer);
+  }
+  return changed;
+}
+
 const Shape* ShapeManager::Find(Id id) const {
   const int index = IndexOf(id);
   return index < 0 ? nullptr : &shapes_[static_cast<size_t>(index)];
@@ -103,6 +123,34 @@ std::vector<Id> ShapeManager::ShapesOn(Id layer) const {
   std::vector<Id> ids;
   for (const Shape& shape : shapes_) {
     if (shape.layer == layer) {
+      ids.push_back(shape.id);
+    }
+  }
+  return ids;
+}
+
+std::vector<Id> ShapeManager::ShapesWithStyle(Id style) const {
+  std::vector<Id> ids;
+  if (style == kNoId) {
+    return ids;
+  }
+  for (const Shape& shape : shapes_) {
+    const bool uses_style =
+        std::ranges::find(shape.styles, style) != shape.styles.end();
+    if (uses_style) {
+      ids.push_back(shape.id);
+    }
+  }
+  return ids;
+}
+
+std::vector<Id> ShapeManager::ShapesWithBrush(Id brush) const {
+  std::vector<Id> ids;
+  if (brush == kNoId) {
+    return ids;
+  }
+  for (const Shape& shape : shapes_) {
+    if (shape.look.brush == brush) {
       ids.push_back(shape.id);
     }
   }

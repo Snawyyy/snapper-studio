@@ -18,6 +18,8 @@ struct Command {
   QString title;  // shown in menus and the command box: "Show Layers"
   QKeySequence shortcut;
   std::function<void()> run;
+  // A second key that does the same, like Ctrl+Y for Redo. Not shown.
+  QKeySequence alternate{};
 };
 
 // Owns every user action. Menus, the Ctrl+K command box and shortcut

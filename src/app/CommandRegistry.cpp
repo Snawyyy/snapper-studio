@@ -116,7 +116,11 @@ void CommandRegistry::AddShortcut(const Command& command) {
     return;
   }
   auto* action = new QAction(command.title, shortcut_host_);
-  action->setShortcut(command.shortcut);
+  QList<QKeySequence> keys = {command.shortcut};
+  if (!command.alternate.isEmpty()) {
+    keys.append(command.alternate);
+  }
+  action->setShortcuts(keys);
   action->setShortcutContext(Qt::ApplicationShortcut);
   const QString id = command.id;
   connect(action, &QAction::triggered, this, [this, id] { Run(id); });

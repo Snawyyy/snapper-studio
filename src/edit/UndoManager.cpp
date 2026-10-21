@@ -45,6 +45,7 @@ void UndoManager::RegisterCommands(CommandRegistry& commands) {
       .title = QStringLiteral("Redo"),
       .shortcut = QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_Z),
       .run = [this] { Redo(); },
+      .alternate = QKeySequence(Qt::CTRL | Qt::Key_Y),
   });
 }
 

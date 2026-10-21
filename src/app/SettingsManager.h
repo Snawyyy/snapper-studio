@@ -4,8 +4,8 @@
 
 #include <memory>
 
+#include "document/ShapeLook.h"
 #include "edit/tools/PenTool.h"
-#include "edit/tools/ShapeTool.h"
 
 class QSettings;
 
@@ -36,9 +36,10 @@ class SettingsManager {
   PenSettings Pen() const;
   void SetPen(const PenSettings& pen);
 
-  // A shape tool's last settings, by tool id ("rectangle", "ellipse").
-  ShapeToolSettings ShapeTool(const QString& tool) const;
-  void SetShapeTool(const QString& tool, const ShapeToolSettings& settings);
+  // The last look for new shapes: fill, line and width. Brushes belong
+  // to a project, so they aren't remembered.
+  ShapeLook NewShapeLook() const;
+  void SetNewShapeLook(const ShapeLook& look);
 
  private:
   std::unique_ptr<QSettings> store_;

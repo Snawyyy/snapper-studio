@@ -44,6 +44,21 @@ class SettingsManagerTest : public QObject {
     const snapper::SettingsManager settings(StoreIn(dir));
     QVERIFY(settings.PanelLayout().isEmpty());
   }
+
+  void NewShapeLookSurvivesRestart() {
+    const QTemporaryDir dir;
+    snapper::ShapeLook look;
+    look.has_fill = true;
+    look.fill = QColor(1, 2, 3, 40);
+    look.line = Qt::red;
+    look.line_width = 7.5F;
+    {
+      snapper::SettingsManager settings(StoreIn(dir));
+      settings.SetNewShapeLook(look);
+    }
+    const snapper::SettingsManager settings(StoreIn(dir));
+    QCOMPARE(settings.NewShapeLook(), look);
+  }
 };
 
 QTEST_GUILESS_MAIN(SettingsManagerTest)

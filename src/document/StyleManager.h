@@ -3,6 +3,7 @@
 #include <QObject>
 #include <QString>
 
+#include <cstdint>
 #include <optional>
 #include <vector>
 
@@ -10,6 +11,8 @@
 #include "document/ShapeLook.h"
 
 namespace snapper {
+
+enum class LookPart : std::uint8_t { kFill, kLine, kWidth, kBrush };
 
 // Which parts of its look a style sets. A part it leaves unset comes from
 // the style before it, or from the shape itself.
@@ -20,6 +23,36 @@ struct StyleParts {
   bool brush = false;
 
   bool operator==(const StyleParts&) const = default;
+
+  bool Sets(LookPart part) const {
+    switch (part) {
+      case LookPart::kFill:
+        return fill;
+      case LookPart::kLine:
+        return line;
+      case LookPart::kWidth:
+        return width;
+      case LookPart::kBrush:
+        return brush;
+    }
+    return false;
+  }
+  void Set(LookPart part, bool sets) {
+    switch (part) {
+      case LookPart::kFill:
+        fill = sets;
+        break;
+      case LookPart::kLine:
+        line = sets;
+        break;
+      case LookPart::kWidth:
+        width = sets;
+        break;
+      case LookPart::kBrush:
+        brush = sets;
+        break;
+    }
+  }
 };
 
 struct Style {

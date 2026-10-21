@@ -27,10 +27,8 @@ class PenOptions : public QWidget {
   PenTool& pen_;
   std::function<void(const PenSettings&)> on_change_;
   NumberField* smoothing_;
-  NumberField* width_;
   QCheckBox* pressure_;
   QCheckBox* close_ends_;
-  QCheckBox* fill_closed_;
 };
 
 }  // namespace snapper

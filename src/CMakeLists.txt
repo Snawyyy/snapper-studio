@@ -28,6 +28,7 @@ target_sources(snapper_core PRIVATE
   edit/tools/PenTool.cpp edit/tools/PenTool.h
   edit/tools/ShapeTool.cpp edit/tools/ShapeTool.h
   edit/HitTest.cpp edit/HitTest.h
+  edit/LookManager.cpp edit/LookManager.h
   edit/MacroCommand.h
   edit/SelectionCommands.cpp edit/SelectionCommands.h
   edit/tools/SelectTool.cpp edit/tools/SelectTool.h
@@ -48,7 +49,6 @@ target_sources(snapper_core PRIVATE
   ui/MainWindow.cpp ui/MainWindow.h
   ui/NumberField.cpp ui/NumberField.h
   ui/PenOptions.cpp ui/PenOptions.h
-  ui/ShapeOptions.cpp ui/ShapeOptions.h
   ui/StudyNoteBox.cpp ui/StudyNoteBox.h
   ui/ToolOptionsPanel.cpp ui/ToolOptionsPanel.h
   ui/ViewNavigator.cpp ui/ViewNavigator.h

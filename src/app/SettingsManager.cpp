@@ -9,13 +9,17 @@ namespace {
 const QString kLayoutKey = QStringLiteral("window/panel_layout");
 const QString kLayoutVersionKey = QStringLiteral("window/panel_layout_version");
 const QString kPenSmoothingKey = QStringLiteral("pen/smoothing");
-const QString kPenWidthKey = QStringLiteral("pen/line_width");
 const QString kPenPressureKey = QStringLiteral("pen/pressure_width");
 const QString kPenCloseKey = QStringLiteral("pen/close_ends");
-const QString kPenFillKey = QStringLiteral("pen/fill_closed");
+const QString kLookHasFillKey = QStringLiteral("look/has_fill");
+const QString kLookFillKey = QStringLiteral("look/fill");
+const QString kLookHasLineKey = QStringLiteral("look/has_line");
+const QString kLookLineKey = QStringLiteral("look/line");
+const QString kLookWidthKey = QStringLiteral("look/line_width");
 
-QString ShapeKey(const QString& tool, const char* name) {
-  return QStringLiteral("%1/%2").arg(tool, QLatin1StringView(name));
+QColor ColorOr(const QVariant& value, const QColor& fallback) {
+  const QColor color = QColor::fromString(value.toString());
+  return color.isValid() ? color : fallback;
 }
 
 }  // namespace
@@ -47,40 +51,35 @@ PenSettings SettingsManager::Pen() const {
   return {
       .smoothing =
           store_->value(kPenSmoothingKey, defaults.smoothing).toDouble(),
-      .line_width = store_->value(kPenWidthKey, defaults.line_width).toDouble(),
       .pressure_width =
           store_->value(kPenPressureKey, defaults.pressure_width).toBool(),
       .close_ends = store_->value(kPenCloseKey, defaults.close_ends).toBool(),
-      .fill_closed = store_->value(kPenFillKey, defaults.fill_closed).toBool(),
   };
 }
 
 void SettingsManager::SetPen(const PenSettings& pen) {
   store_->setValue(kPenSmoothingKey, pen.smoothing);
-  store_->setValue(kPenWidthKey, pen.line_width);
   store_->setValue(kPenPressureKey, pen.pressure_width);
   store_->setValue(kPenCloseKey, pen.close_ends);
-  store_->setValue(kPenFillKey, pen.fill_closed);
 }
 
-ShapeToolSettings SettingsManager::ShapeTool(const QString& tool) const {
-  const ShapeToolSettings defaults;
-  return {
-      .has_fill =
-          store_->value(ShapeKey(tool, "fill"), defaults.has_fill).toBool(),
-      .has_line =
-          store_->value(ShapeKey(tool, "line"), defaults.has_line).toBool(),
-      .line_width =
-          store_->value(ShapeKey(tool, "line_width"), defaults.line_width)
-              .toDouble(),
-  };
+ShapeLook SettingsManager::NewShapeLook() const {
+  const ShapeLook defaults;
+  ShapeLook look;
+  look.has_fill = store_->value(kLookHasFillKey, defaults.has_fill).toBool();
+  look.fill = ColorOr(store_->value(kLookFillKey), defaults.fill);
+  look.has_line = store_->value(kLookHasLineKey, defaults.has_line).toBool();
+  look.line = ColorOr(store_->value(kLookLineKey), defaults.line);
+  look.line_width = store_->value(kLookWidthKey, defaults.line_width).toFloat();
+  return look;
 }
 
-void SettingsManager::SetShapeTool(const QString& tool,
-                                   const ShapeToolSettings& settings) {
-  store_->setValue(ShapeKey(tool, "fill"), settings.has_fill);
-  store_->setValue(ShapeKey(tool, "line"), settings.has_line);
-  store_->setValue(ShapeKey(tool, "line_width"), settings.line_width);
+void SettingsManager::SetNewShapeLook(const ShapeLook& look) {
+  store_->setValue(kLookHasFillKey, look.has_fill);
+  store_->setValue(kLookFillKey, look.fill.name(QColor::HexArgb));
+  store_->setValue(kLookHasLineKey, look.has_line);
+  store_->setValue(kLookLineKey, look.line.name(QColor::HexArgb));
+  store_->setValue(kLookWidthKey, look.line_width);
 }
 
 }  // namespace snapper

@@ -3,6 +3,7 @@
 #include "app/CommandRegistry.h"
 #include "app/Theme.h"
 #include "document/Document.h"
+#include "edit/LookManager.h"
 #include "edit/SelectionManager.h"
 #include "edit/ToolManager.h"
 #include "edit/UndoManager.h"
@@ -35,6 +36,7 @@ struct Fixture {
     const snapper::ToolContext context{.document = document,
                                        .undo = undo,
                                        .selection = selection,
+                                       .looks = looks,
                                        .theme = theme,
                                        .hint = [](const QString&) {}};
     tools.Add(
@@ -47,6 +49,7 @@ struct Fixture {
   snapper::Document document;
   snapper::UndoManager undo;
   snapper::SelectionManager selection{document};
+  snapper::LookManager looks{document, selection, undo, [](const QString&) {}};
   snapper::CommandRegistry commands;
   snapper::Theme theme;
   ToolManager tools;

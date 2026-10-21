@@ -11,16 +11,17 @@ namespace snapper {
 
 namespace {
 
-bool IsShapeUnder(const Shape& shape, const QPointF& canvas,
-                  double canvas_per_screen) {
+bool IsShapeUnder(const Document& document, const Shape& shape,
+                  const QPointF& canvas, double canvas_per_screen) {
+  const ShapeLook look = document.Styles().Resolve(shape.look, shape.styles);
   const QPainterPath line = ShapeGeometry::CenterLine(shape);
   const bool is_in_fill =
-      shape.closed && shape.look.has_fill && line.contains(canvas);
+      shape.closed && look.has_fill && line.contains(canvas);
   if (is_in_fill) {
     return true;
   }
   QPainterPathStroker stroker;
-  stroker.setWidth(shape.look.line_width +
+  stroker.setWidth(look.line_width +
                    2 * HitTest::kLineSlackPx * canvas_per_screen);
   return stroker.createStroke(line).contains(canvas);
 }
@@ -54,8 +55,8 @@ Id HitTest::ShapeAt(const Document& document, Id layer,
   const double canvas_per_screen = 1.0 / view.Zoom();
   const std::vector<Shape>& shapes = document.Shapes().All();
   for (auto it = shapes.rbegin(); it != shapes.rend(); ++it) {
-    const bool is_hit =
-        it->layer == layer && IsShapeUnder(*it, canvas, canvas_per_screen);
+    const bool is_hit = it->layer == layer &&
+                        IsShapeUnder(document, *it, canvas, canvas_per_screen);
     if (is_hit) {
       return it->id;
     }

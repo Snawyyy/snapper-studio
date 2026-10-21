@@ -6,6 +6,7 @@
 #include <algorithm>
 
 #include "document/Document.h"
+#include "edit/LookManager.h"
 #include "edit/SelectionManager.h"
 #include "edit/ShapeCommands.h"
 #include "edit/UndoManager.h"
@@ -42,8 +43,6 @@ ToolInfo PenTool::Info() const {
 void PenTool::SetSettings(const PenSettings& settings) {
   settings_ = settings;
   settings_.smoothing = std::clamp(settings_.smoothing, 0.0, 1.0);
-  settings_.line_width =
-      std::clamp(settings_.line_width, kMinLineWidth, kMaxLineWidth);
 }
 
 void PenTool::Press(const ToolInput& input) {
@@ -90,8 +89,8 @@ void PenTool::Release(const ToolInput& input) {
   shape.id = document.NewId();
   shape.layer = Context().selection.ActiveLayer();
   shape.closed = is_closed;
-  shape.look.line_width = static_cast<float>(settings_.line_width);
-  shape.look.has_fill = is_closed && settings_.fill_closed;
+  shape.look = Context().looks.NewShapes().look;
+  shape.styles = Context().looks.NewShapes().styles;
   for (const StrokePoint& point : points) {
     shape.points.push_back({
         .id = document.NewId(),
@@ -124,8 +123,8 @@ void PenTool::DrawOverlay(QPainter& painter, const ViewTransform& view) const {
     // The size of the line about to be drawn, outlined twice so it shows
     // on light and dark art alike.
     const QPointF center = view.ToScreen(pen_pos_);
-    const double radius =
-        std::max(1.5, settings_.line_width * view.Zoom() / 2.0);
+    const double width = Context().looks.NewShapesResolved().line_width;
+    const double radius = std::max(1.5, width * view.Zoom() / 2.0);
     painter.setBrush(Qt::NoBrush);
     painter.setPen(QPen(QColor(0, 0, 0, 120), 2.0));
     painter.drawEllipse(center, radius, radius);
@@ -137,7 +136,11 @@ void PenTool::DrawOverlay(QPainter& painter, const ViewTransform& view) const {
 
 Shape PenTool::PreviewShape() const {
   Shape shape;
-  shape.look.line_width = static_cast<float>(settings_.line_width);
+  // The id the shape will get, so brush jitter keeps its pattern when the
+  // pen lifts.
+  shape.id = Context().document.NextId();
+  shape.look = Context().looks.NewShapes().look;
+  shape.styles = Context().looks.NewShapes().styles;
   Id id = 1;
   for (const StrokeSample& sample : stroke_->Samples()) {
     shape.points.push_back(

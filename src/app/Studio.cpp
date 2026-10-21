@@ -12,6 +12,7 @@
 #include "app/ThemeManager.h"
 #include "document/Document.h"
 #include "edit/LayerActions.h"
+#include "edit/LookManager.h"
 #include "edit/SelectionManager.h"
 #include "edit/ToolManager.h"
 #include "edit/UndoManager.h"
@@ -23,7 +24,6 @@
 #include "ui/LayersPanel.h"
 #include "ui/MainWindow.h"
 #include "ui/PenOptions.h"
-#include "ui/ShapeOptions.h"
 #include "ui/StudyNoteBox.h"
 #include "ui/ToolOptionsPanel.h"
 
@@ -69,8 +69,15 @@ Studio::Studio()
       document_(std::make_unique<Document>()),
       undo_(std::make_unique<UndoManager>()),
       selection_(std::make_unique<SelectionManager>(*document_)),
+      looks_(std::make_unique<LookManager>(
+          *document_, *selection_, *undo_,
+          [this](const QString& text) { window_->ShowHint(text); })),
       tools_(std::make_unique<ToolManager>()) {
   document_->ResetToNew();
+  looks_->RestoreNewShapes(settings_->NewShapeLook());
+  QObject::connect(
+      looks_.get(), &LookManager::NewShapesChanged, looks_.get(),
+      [this] { settings_->SetNewShapeLook(looks_->NewShapes().look); });
   canvas_ = new CanvasView(*document_, *selection_, theme_->CurrentTheme());
   window_ = std::make_unique<MainWindow>(canvas_);
   layer_actions_ = std::make_unique<LayerActions>(
@@ -84,6 +91,7 @@ Studio::Studio()
   canvas_->RegisterCommands(*commands_);
   tools_->RegisterCommands(*commands_);
   selection_->RegisterCommands(*commands_, *undo_);
+  looks_->RegisterCommands(*commands_);
   window_->RegisterCommands(*commands_);
   commands_->AttachShortcutsTo(window_->Widget());
   project_ = std::make_unique<ProjectIo>(
@@ -139,6 +147,7 @@ void Studio::CreateTools() {
       .document = *document_,
       .undo = *undo_,
       .selection = *selection_,
+      .looks = *looks_,
       .theme = theme_->CurrentTheme(),
       .hint = [this](const QString& text) { window_->ShowHint(text); },
   };
@@ -155,14 +164,7 @@ void Studio::CreateTools() {
 
   for (const ShapeTool::Kind kind :
        {ShapeTool::Kind::kRectangle, ShapeTool::Kind::kEllipse}) {
-    auto shape = std::make_unique<ShapeTool>(context, kind);
-    const QString id = shape->Info().id;
-    shape->SetSettings(settings_->ShapeTool(id));
-    options->AddPage(
-        id, new ShapeOptions(*shape, [this, id](const ShapeToolSettings& s) {
-          settings_->SetShapeTool(id, s);
-        }));
-    tools_->Add(std::move(shape));
+    tools_->Add(std::make_unique<ShapeTool>(context, kind));
   }
 
   window_->SetPanelContent(MainWindow::kToolOptions, options);

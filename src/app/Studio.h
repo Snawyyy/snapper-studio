@@ -11,6 +11,7 @@ class CommandBox;
 class CommandRegistry;
 class Document;
 class LayerActions;
+class LookManager;
 class MainWindow;
 class ProjectIo;
 class SelectionManager;
@@ -57,6 +58,7 @@ class Studio {
   std::unique_ptr<Document> document_;
   std::unique_ptr<UndoManager> undo_;
   std::unique_ptr<SelectionManager> selection_;
+  std::unique_ptr<LookManager> looks_;
   std::unique_ptr<ToolManager> tools_;
   std::unique_ptr<LayerActions> layer_actions_;
   std::unique_ptr<ProjectIo> project_;

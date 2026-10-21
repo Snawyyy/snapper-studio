@@ -7,6 +7,7 @@
 #include <cmath>
 
 #include "document/Document.h"
+#include "edit/LookManager.h"
 #include "edit/SelectionManager.h"
 #include "edit/ShapeCommands.h"
 #include "edit/UndoManager.h"
@@ -38,11 +39,6 @@ ToolInfo ShapeTool::Info() const {
           .key = QKeySequence(Qt::Key_E),
           .hint = QStringLiteral("Ellipse: drag from corner to corner. "
                                  "Shift for a circle, Alt from the middle.")};
-}
-
-void ShapeTool::SetSettings(const ShapeToolSettings& settings) {
-  settings_ = settings;
-  settings_.line_width = std::clamp(settings_.line_width, 0.5, 200.0);
 }
 
 void ShapeTool::Press(const ToolInput& input) {
@@ -113,10 +109,8 @@ Shape ShapeTool::Build(const QRectF& rect, bool with_ids) const {
   shape.id = new_id();
   shape.layer = Context().selection.ActiveLayer();
   shape.closed = true;
-  shape.look.has_fill = settings_.has_fill;
-  shape.look.fill = QColor::fromRgba(kDefaultFill);
-  shape.look.has_line = settings_.has_line;
-  shape.look.line_width = static_cast<float>(settings_.line_width);
+  shape.look = Context().looks.NewShapes().look;
+  shape.styles = Context().looks.NewShapes().styles;
 
   const bool is_rectangle = kind_ == Kind::kRectangle;
   const QPointF c = rect.center();

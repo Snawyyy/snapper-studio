@@ -11,6 +11,7 @@ class QPainter;
 namespace snapper {
 
 class Document;
+class LookManager;
 struct Theme;
 class SelectionManager;
 class UndoManager;
@@ -34,6 +35,8 @@ struct ToolContext {
   Document& document;
   UndoManager& undo;
   SelectionManager& selection;
+  // The look new shapes get.
+  const LookManager& looks;
   const Theme& theme;
   // Shows a line in the status bar naming the next step or what went
   // wrong. An empty text clears it.

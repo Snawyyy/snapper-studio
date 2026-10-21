@@ -13,21 +13,17 @@ namespace snapper {
 struct PenSettings {
   // 0 follows the pen exactly, 1 is the smoothest.
   double smoothing = 0.5;
-  double line_width = 3.0;
   bool pressure_width = true;
   // A stroke ending near where it began becomes a closed shape.
   bool close_ends = true;
-  bool fill_closed = false;
 };
 
-// Draws freehand lines on the active layer. The line is smoothed as it is
-// drawn, its width follows pen pressure, and when the pen lifts it becomes
-// a shape with as few points as keep its form.
+// Draws freehand lines on the active layer, in the look for new shapes.
+// The line is smoothed as it is drawn, its width follows pen pressure, and
+// when the pen lifts it becomes a shape with as few points as keep its
+// form.
 class PenTool : public Tool {
  public:
-  static constexpr double kMinLineWidth = 0.5;
-  static constexpr double kMaxLineWidth = 200.0;
-
   explicit PenTool(ToolContext context);
   ~PenTool() override;
 

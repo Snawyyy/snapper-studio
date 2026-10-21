@@ -6,19 +6,31 @@ namespace snapper {
 
 Document::Document(QObject* parent) : QObject(parent) {}
 
+// Sets the line color and brush, so changing it restyles every line drawn
+// with it, while each line keeps the width it was drawn at.
+Style Document::DefaultStyle(Id id) {
+  Style style{.id = id, .name = QStringLiteral("Ink")};
+  style.parts.line = true;
+  style.parts.brush = true;
+  return style;
+}
+
 void Document::ResetToNew() {
   shapes_.Clear();
   layers_.Clear();
+  styles_.Clear();
   images_.Clear();
   canvas_ = CanvasSettings{};
   next_id_ = 1;
   layers_.Insert(Layer{.id = NewId(), .name = QStringLiteral("Layer 1")}, 0);
+  styles_.Insert(DefaultStyle(NewId()), 0);
   Q_EMIT Reset();
 }
 
 int Document::Replace(const DocumentContents& contents) {
   shapes_.Clear();
   layers_.Clear();
+  styles_.Clear();
   images_.Clear();
   canvas_ = contents.canvas;
   next_id_ = 1;
@@ -26,6 +38,11 @@ int Document::Replace(const DocumentContents& contents) {
   for (auto it = contents.images.cbegin(); it != contents.images.cend(); ++it) {
     QString error;
     if (!images_.AddNamed(it.key(), it.value(), &error)) {
+      ++skipped;
+    }
+  }
+  for (const Style& style : contents.styles) {
+    if (!styles_.Insert(style, styles_.Count())) {
       ++skipped;
     }
   }
@@ -49,6 +66,7 @@ DocumentContents Document::Contents() const {
                             .next_id = next_id_,
                             .layers = layers_.All(),
                             .shapes = shapes_.All(),
+                            .styles = styles_.All(),
                             .images = {}};
   for (const Layer& layer : contents.layers) {
     const bool has_picture =

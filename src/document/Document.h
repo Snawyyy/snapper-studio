@@ -8,6 +8,7 @@
 #include "document/ImageStore.h"
 #include "document/LayerManager.h"
 #include "document/ShapeManager.h"
+#include "document/StyleManager.h"
 
 namespace snapper {
 
@@ -26,6 +27,7 @@ struct DocumentContents {
   Id next_id = 1;
   std::vector<Layer> layers;
   std::vector<Shape> shapes;
+  std::vector<Style> styles;
   // Picture file bytes by name.
   QHash<QString, QByteArray> images;
 };
@@ -39,12 +41,14 @@ class Document : public QObject {
   explicit Document(QObject* parent = nullptr);
 
   // Empties everything and starts a project ready to draw: one vector
-  // layer.
+  // layer and a default style.
   void ResetToNew();
   // Empties everything and fills it from loaded contents. Items the
   // managers refuse (bad ids, over the limits, unreadable pictures) are
   // skipped and counted.
   int Replace(const DocumentContents& contents);
+  // The style a new project starts with.
+  static Style DefaultStyle(Id id);
   // Only the pictures some layer still uses are included.
   DocumentContents Contents() const;
 
@@ -61,6 +65,8 @@ class Document : public QObject {
   const LayerManager& Layers() const { return layers_; }
   ShapeManager& Shapes() { return shapes_; }
   const ShapeManager& Shapes() const { return shapes_; }
+  StyleManager& Styles() { return styles_; }
+  const StyleManager& Styles() const { return styles_; }
   ImageStore& Images() { return images_; }
   const ImageStore& Images() const { return images_; }
 
@@ -74,6 +80,7 @@ class Document : public QObject {
   Id next_id_ = 1;
   LayerManager layers_;
   ShapeManager shapes_;
+  StyleManager styles_;
   ImageStore images_;
 };
 

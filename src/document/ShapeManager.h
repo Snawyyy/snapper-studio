@@ -1,6 +1,5 @@
 #pragma once
 
-#include <QColor>
 #include <QHash>
 #include <QObject>
 #include <QPointF>
@@ -9,6 +8,7 @@
 #include <vector>
 
 #include "document/Ids.h"
+#include "document/ShapeLook.h"
 
 namespace snapper {
 
@@ -25,15 +25,6 @@ struct Point {
   float curve = kSmoothCurve;
   // Scales the shape's line width here, from pen pressure. 1 is full width.
   float width = 1.0F;
-};
-
-// A shape's own fill and line. Styles shared between shapes come in M2.
-struct ShapeLook {
-  bool has_fill = false;
-  QColor fill = Qt::white;
-  bool has_line = true;
-  QColor line = Qt::black;
-  float line_width = 3.0F;
 };
 
 struct Shape {

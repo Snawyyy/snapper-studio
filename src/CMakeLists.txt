@@ -13,7 +13,9 @@ target_sources(snapper_core PRIVATE
   document/ProjectJson.cpp document/ProjectJson.h
   document/ImageStore.cpp document/ImageStore.h
   document/LayerManager.cpp document/LayerManager.h
+  document/ShapeLook.h
   document/ShapeManager.cpp document/ShapeManager.h
+  document/StyleManager.cpp document/StyleManager.h
   edit/SelectionManager.cpp edit/SelectionManager.h
   edit/Tool.h
   edit/ToolManager.cpp edit/ToolManager.h

@@ -23,6 +23,7 @@ target_sources(snapper_core PRIVATE
   edit/SelectionManager.cpp edit/SelectionManager.h
   edit/Tool.h
   edit/ToolManager.cpp edit/ToolManager.h
+  edit/tools/EyedropperTool.cpp edit/tools/EyedropperTool.h
   edit/tools/LayerCheck.cpp edit/tools/LayerCheck.h
   edit/tools/PenStroke.cpp edit/tools/PenStroke.h
   edit/tools/PenTool.cpp edit/tools/PenTool.h
@@ -57,6 +58,7 @@ target_sources(snapper_core PRIVATE
   ui/MainWindow.cpp ui/MainWindow.h
   ui/NumberField.cpp ui/NumberField.h
   ui/PenOptions.cpp ui/PenOptions.h
+  ui/EyedropperOptions.cpp ui/EyedropperOptions.h
   ui/LookCombos.cpp ui/LookCombos.h
   ui/LookEditor.cpp ui/LookEditor.h
   ui/StudyNoteBox.cpp ui/StudyNoteBox.h

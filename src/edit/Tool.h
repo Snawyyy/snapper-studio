@@ -36,7 +36,7 @@ struct ToolContext {
   UndoManager& undo;
   SelectionManager& selection;
   // The look new shapes get.
-  const LookManager& looks;
+  LookManager& looks;
   const Theme& theme;
   // Shows a line in the status bar naming the next step or what went
   // wrong. An empty text clears it.

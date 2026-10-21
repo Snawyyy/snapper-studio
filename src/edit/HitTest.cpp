@@ -11,19 +11,22 @@ namespace snapper {
 
 namespace {
 
-bool IsShapeUnder(const Document& document, const Shape& shape,
-                  const QPointF& canvas, double canvas_per_screen) {
+bool IsOnLineAt(const Document& document, const Shape& shape,
+                const QPointF& canvas, double canvas_per_screen) {
   const ShapeLook look = document.Styles().Resolve(shape.look, shape.styles);
-  const QPainterPath line = ShapeGeometry::CenterLine(shape);
-  const bool is_in_fill =
-      shape.closed && look.has_fill && line.contains(canvas);
-  if (is_in_fill) {
-    return true;
-  }
   QPainterPathStroker stroker;
   stroker.setWidth(look.line_width +
                    2 * HitTest::kLineSlackPx * canvas_per_screen);
-  return stroker.createStroke(line).contains(canvas);
+  return stroker.createStroke(ShapeGeometry::CenterLine(shape))
+      .contains(canvas);
+}
+
+bool IsShapeUnder(const Document& document, const Shape& shape,
+                  const QPointF& canvas, double canvas_per_screen) {
+  const ShapeLook look = document.Styles().Resolve(shape.look, shape.styles);
+  const bool is_in_fill = shape.closed && look.has_fill &&
+                          ShapeGeometry::CenterLine(shape).contains(canvas);
+  return is_in_fill || IsOnLineAt(document, shape, canvas, canvas_per_screen);
 }
 
 }  // namespace
@@ -62,6 +65,11 @@ Id HitTest::ShapeAt(const Document& document, Id layer,
     }
   }
   return kNoId;
+}
+
+bool HitTest::IsOnLine(const Document& document, const Shape& shape,
+                       const ViewTransform& view, const QPointF& screen) {
+  return IsOnLineAt(document, shape, view.ToCanvas(screen), 1.0 / view.Zoom());
 }
 
 Id HitTest::LayerAt(const Document& document, const ViewTransform& view,

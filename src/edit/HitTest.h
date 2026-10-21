@@ -9,6 +9,7 @@
 namespace snapper {
 
 class Document;
+struct Shape;
 class ViewTransform;
 
 // Finds what lies under the pointer. Distances are in screen pixels, so
@@ -25,6 +26,9 @@ class HitTest {
   // pointer, or kNoId.
   static Id ShapeAt(const Document& document, Id layer,
                     const ViewTransform& view, const QPointF& screen);
+  // True when the pointer is on the shape's line, rather than its fill.
+  static bool IsOnLine(const Document& document, const Shape& shape,
+                       const ViewTransform& view, const QPointF& screen);
   // The topmost visible layer with a shape under the pointer, or kNoId.
   static Id LayerAt(const Document& document, const ViewTransform& view,
                     const QPointF& screen);

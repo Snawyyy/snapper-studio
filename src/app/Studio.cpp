@@ -18,6 +18,7 @@
 #include "edit/StyleActions.h"
 #include "edit/ToolManager.h"
 #include "edit/UndoManager.h"
+#include "edit/tools/EyedropperTool.h"
 #include "edit/tools/PenTool.h"
 #include "edit/tools/SelectTool.h"
 #include "edit/tools/ShapeTool.h"
@@ -25,6 +26,7 @@
 #include "ui/CanvasView.h"
 #include "ui/ColorPopover.h"
 #include "ui/CommandBox.h"
+#include "ui/EyedropperOptions.h"
 #include "ui/LayersPanel.h"
 #include "ui/MainWindow.h"
 #include "ui/PenOptions.h"
@@ -172,6 +174,26 @@ void Studio::CreateTools() {
     tools_->Add(std::make_unique<ShapeTool>(context, kind));
   }
 
+  auto eyedropper = std::make_unique<EyedropperTool>(context);
+  EyedropperTool* dropper = eyedropper.get();
+  auto* dropper_options = new EyedropperOptions(*dropper);
+  options->AddPage(dropper->Info().id, dropper_options);
+  tools_->Add(std::move(eyedropper));
+  // I picks a color and Alt+I a whole style. Leaving the tool goes back to
+  // colors, so I always means color.
+  QObject::connect(tools_.get(), &ToolManager::ActiveChanged, dropper_options,
+                   [dropper, dropper_options](const QString& id) {
+                     if (id != dropper->Info().id) {
+                       dropper->SetMode(EyedropperTool::Mode::kColor);
+                       dropper_options->Refresh();
+                     }
+                   });
+  pick_style_ = [this, dropper, dropper_options] {
+    dropper->SetMode(EyedropperTool::Mode::kWholeStyle);
+    dropper_options->Refresh();
+    tools_->Activate(dropper->Info().id);
+  };
+
   window_->SetPanelContent(MainWindow::kToolOptions, options);
   options->ShowTool(tools_->ActiveId());
   QObject::connect(tools_.get(), &ToolManager::ActiveChanged, options,
@@ -250,6 +272,12 @@ void Studio::RegisterAppCommands() {
       .title = QStringLiteral("Commands"),
       .shortcut = QKeySequence(Qt::CTRL | Qt::Key_K),
       .run = [this] { command_box_->Open(); },
+  });
+  commands_->Add({
+      .id = QStringLiteral("tool.eyedropper-style"),
+      .title = QStringLiteral("Pick Whole Style"),
+      .shortcut = QKeySequence(Qt::ALT | Qt::Key_I),
+      .run = [this] { pick_style_(); },
   });
   commands_->Add({
       .id = QStringLiteral("app.quit"),

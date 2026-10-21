@@ -1,5 +1,6 @@
 #pragma once
 
+#include <functional>
 #include <memory>
 
 class QWidget;
@@ -74,6 +75,8 @@ class Studio {
   CommandBox* command_box_ = nullptr;
   StudyNoteBox* note_box_ = nullptr;
   ColorPopover* color_popover_ = nullptr;
+  // Switches to the eyedropper, picking whole styles.
+  std::function<void()> pick_style_;
 };
 
 }  // namespace snapper

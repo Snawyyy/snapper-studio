@@ -16,6 +16,7 @@
 //   shot PATH                save a screenshot of the window, with
 //                            floating panels and popups drawn on top
 //   focus                    print which control has focus
+//   windows                  print every visible window and where it is
 //   quit                     stop (also happens at the end of the script)
 
 #include <QApplication>
@@ -154,6 +155,8 @@ class Driver : public QObject {
       std::printf("saved %s\n", qPrintable(step.rest));
     } else if (action == u"focus") {
       PrintFocus();
+    } else if (action == u"windows") {
+      PrintWindows();
     } else if (action == u"quit") {
       QApplication::quit();
       return;
@@ -188,6 +191,20 @@ class Driver : public QObject {
       }
     }
     return shot;
+  }
+
+  void PrintWindows() const {
+    const QWidgetList windows = QApplication::topLevelWidgets();
+    for (const QWidget* window : windows) {
+      if (!window->isVisible()) {
+        continue;
+      }
+      const QRect box = window->geometry();
+      std::printf("window: %s \"%s\" at %d,%d size %dx%d\n",
+                  window->metaObject()->className(),
+                  qPrintable(window->windowTitle()), box.x(), box.y(),
+                  box.width(), box.height());
+    }
   }
 
   void PrintFocus() const {

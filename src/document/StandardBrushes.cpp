@@ -54,8 +54,8 @@ QByteArray PencilTip() {
   return Draw([](int x, int y, double dx, double dy) {
     const double r = std::hypot(dx, dy);
     const double body = Edge(26.0 - r, 8.0);
-    const double grain = Noise(x / 2, y / 2, 1) > 0.4 ? 1.0 : 0.3;
-    return body * grain * 0.75;
+    const double grain = Noise(x / 2, y / 2, 1) > 0.45 ? 1.0 : 0.1;
+    return body * grain * 0.4;
   });
 }
 
@@ -77,12 +77,12 @@ QByteArray ChalkTip() {
   });
 }
 
-// A flat, see-through chisel.
+// A flat, see-through chisel, short along the line and wide across it.
 QByteArray MarkerTip() {
   return Draw([](int /*x*/, int /*y*/, double dx, double dy) {
-    const double across = Edge(30.0 - std::abs(dx), 3.0);
-    const double along = Edge(11.0 - std::abs(dy), 3.0);
-    return across * along * 0.35;
+    const double along = Edge(11.0 - std::abs(dx), 3.0);
+    const double across = Edge(30.0 - std::abs(dy), 3.0);
+    return along * across * 0.35;
   });
 }
 
@@ -91,7 +91,7 @@ QByteArray MarkerTip() {
 std::vector<StandardBrush> StandardBrushes() {
   return {
       {.brush = {.name = QStringLiteral("Pencil"),
-                 .spacing = 0.2F,
+                 .spacing = 0.25F,
                  .align = false,
                  .angle_jitter = 180.0F,
                  .size_jitter = 0.1F,

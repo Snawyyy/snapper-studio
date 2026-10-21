@@ -12,6 +12,10 @@ target_sources(snapper_core PRIVATE
   edit/LayerCommands.cpp edit/LayerCommands.h
   edit/ShapeCommands.cpp edit/ShapeCommands.h
   edit/UndoManager.cpp edit/UndoManager.h
+  render/Renderer.cpp render/Renderer.h
+  render/ShapeGeometry.cpp render/ShapeGeometry.h
+  render/ViewTransform.cpp render/ViewTransform.h
+  ui/CanvasView.cpp ui/CanvasView.h
   ui/CommandBox.cpp ui/CommandBox.h
   ui/MainWindow.cpp ui/MainWindow.h
 )

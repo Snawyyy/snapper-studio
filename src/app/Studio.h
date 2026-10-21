@@ -6,11 +6,13 @@ class QWidget;
 
 namespace snapper {
 
+class CanvasView;
 class CommandBox;
 class CommandRegistry;
 class Document;
 class MainWindow;
 class SettingsManager;
+class ThemeManager;
 class UndoManager;
 
 // Owns every manager and the main window, and wires them together. The app
@@ -34,12 +36,15 @@ class Studio {
   void RestoreSession();
   void SaveSession();
 
+  std::unique_ptr<ThemeManager> theme_;
   std::unique_ptr<SettingsManager> settings_;
   std::unique_ptr<CommandRegistry> commands_;
   std::unique_ptr<Document> document_;
   std::unique_ptr<UndoManager> undo_;
   std::unique_ptr<MainWindow> window_;
-  CommandBox* command_box_ = nullptr;  // owned by the window
+  // Both owned by the window.
+  CanvasView* canvas_ = nullptr;
+  CommandBox* command_box_ = nullptr;
 };
 
 }  // namespace snapper

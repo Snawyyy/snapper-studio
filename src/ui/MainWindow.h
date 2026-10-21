@@ -28,7 +28,8 @@ class MainWindow {
  public:
   static constexpr int kPanelCount = 7;
 
-  MainWindow();
+  // Takes ownership of the canvas and keeps it in the middle.
+  explicit MainWindow(QWidget* canvas);
   ~MainWindow();
   MainWindow(const MainWindow&) = delete;
   MainWindow& operator=(const MainWindow&) = delete;

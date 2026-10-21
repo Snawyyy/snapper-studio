@@ -38,14 +38,11 @@ constexpr int kPanelMinHeight = 120;
 
 }  // namespace
 
-MainWindow::MainWindow()
+MainWindow::MainWindow(QWidget* canvas)
     : window_(std::make_unique<KDDockWidgets::QtWidgets::MainWindow>(
           QStringLiteral("main-window"), kWindowOptions)) {
   window_->setWindowTitle(QStringLiteral("Snapper Studio"));
   window_->resize(1280, 800);
-  auto* canvas = new QWidget();
-  canvas->setObjectName(QStringLiteral("canvas"));
-  canvas->setAttribute(Qt::WA_StyledBackground);
   window_->setPersistentCentralWidget(canvas);
   CreatePanels();
   ArrangeDefaultLayout();

@@ -6,8 +6,10 @@
 
 #include "app/CommandRegistry.h"
 #include "app/SettingsManager.h"
+#include "app/ThemeManager.h"
 #include "document/Document.h"
 #include "edit/UndoManager.h"
+#include "ui/CanvasView.h"
 #include "ui/CommandBox.h"
 #include "ui/MainWindow.h"
 
@@ -34,18 +36,29 @@ class CloseWatcher : public QObject {
   std::function<void()> on_close_;
 };
 
+// The theme was checked when the app started, so a failed load here only
+// leaves the canvas with default colors.
+std::unique_ptr<ThemeManager> LoadTheme() {
+  auto theme = std::make_unique<ThemeManager>();
+  theme->LoadFromFile(QStringLiteral(":/theme/theme.json"));
+  return theme;
+}
+
 }  // namespace
 
 Studio::Studio()
-    : settings_(std::make_unique<SettingsManager>()),
+    : theme_(LoadTheme()),
+      settings_(std::make_unique<SettingsManager>()),
       commands_(std::make_unique<CommandRegistry>()),
       document_(std::make_unique<Document>()),
-      undo_(std::make_unique<UndoManager>()),
-      window_(std::make_unique<MainWindow>()) {
+      undo_(std::make_unique<UndoManager>()) {
   document_->ResetToNew();
+  canvas_ = new CanvasView(*document_, theme_->CurrentTheme());
+  window_ = std::make_unique<MainWindow>(canvas_);
   command_box_ = new CommandBox(commands_.get(), window_->Widget());
   RegisterAppCommands();
   undo_->RegisterCommands(*commands_);
+  canvas_->RegisterCommands(*commands_);
   window_->RegisterCommands(*commands_);
   commands_->AttachShortcutsTo(window_->Widget());
   window_->Widget()->installEventFilter(

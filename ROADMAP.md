@@ -8,7 +8,7 @@ the linter, and its UX questions have been asked and answered.
 The app is **Snapper Studio**. The program and package are
 `snapper-studio`, since Linux already ships a backup tool called
 `snapper`. Project files are `.snapper`. GitHub repo:
-`git@github.com:Snawyyy/Snapper-Studio.git`.
+`git@github.com:Snawyyy/snapper-studio.git`.
 
 ## M0. Empty app that builds
 Git repo, CMake project, Qt and KDDockWidgets linked, the main window

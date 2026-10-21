@@ -65,9 +65,9 @@ bool CommandRegistry::Run(const QString& id) {
 }
 
 const Command* CommandRegistry::Find(const QString& id) const {
-  const auto it = std::find_if(
-      commands_.begin(), commands_.end(),
-      [&id](const Command& command) { return command.id == id; });
+  const auto it =
+      std::find_if(commands_.begin(), commands_.end(),
+                   [&id](const Command& command) { return command.id == id; });
   return it != commands_.end() ? &*it : nullptr;
 }
 
@@ -82,20 +82,19 @@ std::vector<QString> CommandRegistry::Search(const QString& query) const {
   std::vector<Match> matches;
   for (int i = 0; i < Count(); ++i) {
     const Command& command = commands_[static_cast<size_t>(i)];
-    const int score =
-        lists_everything ? 1 : MatchScore(command.title, trimmed);
+    const int score = lists_everything ? 1 : MatchScore(command.title, trimmed);
     if (score > 0) {
       matches.push_back({score, i, &command});
     }
   }
 
-  std::stable_sort(matches.begin(), matches.end(),
-                   [](const Match& a, const Match& b) {
-                     return a.score > b.score;
-                   });
-  std::vector<QString> ids;
+  std::stable_sort(
+      matches.begin(), matches.end(),
+      [](const Match& a, const Match& b) { return a.score > b.score; });
   const size_t count =
       std::min(matches.size(), static_cast<size_t>(kMaxSearchResults));
+  std::vector<QString> ids;
+  ids.reserve(count);
   for (size_t i = 0; i < count; ++i) {
     ids.push_back(matches[i].command->id);
   }
@@ -112,8 +111,7 @@ void CommandRegistry::AttachShortcutsTo(QWidget* host) {
 // Each shortcut is a QAction on the host window. It is app wide so it also
 // fires from floating panels.
 void CommandRegistry::AddShortcut(const Command& command) {
-  const bool can_add =
-      shortcut_host_ != nullptr && !command.shortcut.isEmpty();
+  const bool can_add = shortcut_host_ != nullptr && !command.shortcut.isEmpty();
   if (!can_add) {
     return;
   }

@@ -72,9 +72,9 @@ class CommandRegistryTest : public QObject {
     QVERIFY(commands.Add(MakeCommand("none", "Quit")));
 
     const std::vector<QString> ids = commands.Search(QStringLiteral("lay"));
-    const std::vector<QString> expected = {
-        QStringLiteral("start"), QStringLiteral("word"),
-        QStringLiteral("anywhere")};
+    const std::vector<QString> expected = {QStringLiteral("start"),
+                                           QStringLiteral("word"),
+                                           QStringLiteral("anywhere")};
     QCOMPARE(ids, expected);
   }
 

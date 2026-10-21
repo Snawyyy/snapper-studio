@@ -42,8 +42,8 @@ Studio::Studio()
   RegisterAppCommands();
   window_->RegisterCommands(*commands_);
   commands_->AttachShortcutsTo(window_->Widget());
-  window_->Widget()->installEventFilter(new CloseWatcher(
-      [this] { SaveSession(); }, window_->Widget()));
+  window_->Widget()->installEventFilter(
+      new CloseWatcher([this] { SaveSession(); }, window_->Widget()));
 }
 
 Studio::~Studio() = default;

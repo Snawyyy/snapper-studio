@@ -18,31 +18,30 @@ class SettingsManagerTest : public QObject {
 
  private Q_SLOTS:
   void NothingSavedIsEmpty() {
-    QTemporaryDir dir;
-    snapper::SettingsManager settings(StoreIn(dir));
+    const QTemporaryDir dir;
+    const snapper::SettingsManager settings(StoreIn(dir));
     QVERIFY(settings.PanelLayout().isEmpty());
   }
 
   void LayoutSurvivesRestart() {
-    QTemporaryDir dir;
+    const QTemporaryDir dir;
     {
       snapper::SettingsManager settings(StoreIn(dir));
       settings.SetPanelLayout("layout bytes");
     }
-    snapper::SettingsManager settings(StoreIn(dir));
+    const snapper::SettingsManager settings(StoreIn(dir));
     QCOMPARE(settings.PanelLayout(), QByteArray("layout bytes"));
   }
 
   void OldLayoutVersionIsDropped() {
-    QTemporaryDir dir;
+    const QTemporaryDir dir;
     {
       std::unique_ptr<QSettings> store = StoreIn(dir);
-      store->setValue(QStringLiteral("window/panel_layout"),
-                      QByteArray("old"));
+      store->setValue(QStringLiteral("window/panel_layout"), QByteArray("old"));
       store->setValue(QStringLiteral("window/panel_layout_version"),
                       snapper::SettingsManager::kLayoutVersion - 1);
     }
-    snapper::SettingsManager settings(StoreIn(dir));
+    const snapper::SettingsManager settings(StoreIn(dir));
     QVERIFY(settings.PanelLayout().isEmpty());
   }
 };

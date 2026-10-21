@@ -132,10 +132,9 @@ class Driver : public QObject {
     } else if (action == u"wait" && ReadInts(step, 1, n)) {
       delay_ms = n[0];
     } else if (action == u"click" && ReadInts(step, 2, n)) {
-      const bool is_right = step.words.size() > 3 &&
-                            step.words[3] == u"right";
-      const Qt::MouseButton button = is_right ? Qt::RightButton
-                                              : Qt::LeftButton;
+      const bool is_right = step.words.size() > 3 && step.words[3] == u"right";
+      const Qt::MouseButton button =
+          is_right ? Qt::RightButton : Qt::LeftButton;
       QTest::mouseClick(Target(), button, {}, QPoint(n[0], n[1]));
     } else if (action == u"doubleclick" && ReadInts(step, 2, n)) {
       QTest::mouseDClick(Target(), Qt::LeftButton, {}, QPoint(n[0], n[1]));

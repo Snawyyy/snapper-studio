@@ -3,6 +3,7 @@
 #include <QByteArray>
 
 #include <array>
+#include <cstdint>
 #include <memory>
 
 class QWidget;
@@ -46,7 +47,7 @@ class MainWindow {
   void ResetLayout();
 
  private:
-  enum Panel {
+  enum Panel : std::uint8_t {
     kToolOptions,
     kHistory,
     kLayers,

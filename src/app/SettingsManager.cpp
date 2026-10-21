@@ -11,8 +11,7 @@ const QString kLayoutVersionKey = QStringLiteral("window/panel_layout_version");
 
 }  // namespace
 
-SettingsManager::SettingsManager()
-    : store_(std::make_unique<QSettings>()) {}
+SettingsManager::SettingsManager() : store_(std::make_unique<QSettings>()) {}
 
 SettingsManager::SettingsManager(std::unique_ptr<QSettings> store)
     : store_(std::move(store)) {}

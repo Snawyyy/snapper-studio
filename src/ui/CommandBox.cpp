@@ -138,8 +138,8 @@ void CommandBox::Refill() {
     const Command* command = registry_->Find(id);
     auto* item = new QListWidgetItem(command->title, results_);
     item->setData(kIdRole, id);
-    item->setData(kShortcutRole, command->shortcut.toString(
-                                     QKeySequence::NativeText));
+    item->setData(kShortcutRole,
+                  command->shortcut.toString(QKeySequence::NativeText));
   }
   if (results_->count() > 0) {
     results_->setCurrentRow(0);

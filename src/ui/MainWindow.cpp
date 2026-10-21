@@ -76,7 +76,7 @@ void MainWindow::RegisterCommands(CommandRegistry& commands) {
 }
 
 QByteArray MainWindow::SaveLayout() const {
-  KDDockWidgets::LayoutSaver saver;
+  const KDDockWidgets::LayoutSaver saver;
   return saver.serializeLayout();
 }
 
@@ -108,8 +108,8 @@ void MainWindow::ShowPanel(int panel) {
 void MainWindow::CreatePanels() {
   for (int i = 0; i < kPanelCount; ++i) {
     const PanelInfo& info = kPanelInfo[static_cast<size_t>(i)];
-    auto* dock = new KDDockWidgets::QtWidgets::DockWidget(
-        QString::fromLatin1(info.id));
+    auto* dock =
+        new KDDockWidgets::QtWidgets::DockWidget(QString::fromLatin1(info.id));
     dock->setTitle(QString::fromLatin1(info.title));
     auto* content = new QWidget();
     content->setMinimumSize(kPanelMinWidth, kPanelMinHeight);
@@ -127,8 +127,10 @@ void MainWindow::ArrangeDefaultLayout() {
   const KDDockWidgets::InitialOption side_size(QSize(260, 0));
   const KDDockWidgets::InitialOption timeline_size(QSize(0, 180));
 
-  window_->addDockWidget(panels_[kToolOptions], Location_OnLeft, nullptr, side_size);
-  window_->addDockWidget(panels_[kLayers], Location_OnRight, nullptr, side_size);
+  window_->addDockWidget(panels_[kToolOptions], Location_OnLeft, nullptr,
+                         side_size);
+  window_->addDockWidget(panels_[kLayers], Location_OnRight, nullptr,
+                         side_size);
   panels_[kLayers]->addDockWidgetAsTab(panels_[kActions]);
   window_->addDockWidget(panels_[kStyles], Location_OnBottom, panels_[kLayers]);
   panels_[kStyles]->addDockWidgetAsTab(panels_[kBrushes]);

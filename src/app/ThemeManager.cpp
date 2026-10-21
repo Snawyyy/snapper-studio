@@ -15,12 +15,12 @@ namespace {
 
 struct ColorField {
   const char* key;
-  QColor Theme::*member;
+  QColor Theme::* member;
 };
 
 struct SizeField {
   const char* key;
-  int Theme::*member;
+  int Theme::* member;
 };
 
 constexpr std::array<ColorField, 15> kColorFields = {{
@@ -77,8 +77,8 @@ bool ThemeManager::LoadFromFile(const QString& path) {
 bool ThemeManager::LoadFromJson(const QByteArray& json) {
   QJsonParseError parse_error;
   const QJsonDocument doc = QJsonDocument::fromJson(json, &parse_error);
-  const bool is_object = parse_error.error == QJsonParseError::NoError &&
-                         doc.isObject();
+  const bool is_object =
+      parse_error.error == QJsonParseError::NoError && doc.isObject();
   if (!is_object) {
     error_ = QStringLiteral("Theme file is not a JSON object: %1")
                  .arg(parse_error.errorString());
@@ -92,8 +92,7 @@ bool ThemeManager::LoadFromJson(const QByteArray& json) {
 
   for (const ColorField& field : kColorFields) {
     const QString key = QString::fromLatin1(field.key);
-    const QColor color =
-        QColor::fromString(colors.value(key).toString());
+    const QColor color = QColor::fromString(colors.value(key).toString());
     if (!color.isValid()) {
       error_ = QStringLiteral("Theme color \"%1\" is missing or bad").arg(key);
       return false;
@@ -112,7 +111,7 @@ bool ThemeManager::LoadFromJson(const QByteArray& json) {
   }
 
   loaded.font_family = root.value(QStringLiteral("font_family")).toString();
-  theme_ = loaded;
+  theme_ = std::move(loaded);
   error_.clear();
   return true;
 }

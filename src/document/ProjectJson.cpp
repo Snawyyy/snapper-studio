@@ -30,12 +30,19 @@ QJsonObject WriteCanvas(const CanvasSettings& canvas) {
 }
 
 QJsonObject WriteLayer(const Layer& layer) {
-  return {{QStringLiteral("id"), layer.id},
-          {QStringLiteral("parent"), layer.parent},
-          {QStringLiteral("type"), LayerTypeName(layer.type)},
-          {QStringLiteral("name"), layer.name},
-          {QStringLiteral("visible"), layer.visible},
-          {QStringLiteral("locked"), layer.locked}};
+  QJsonObject json{{QStringLiteral("id"), layer.id},
+                   {QStringLiteral("parent"), layer.parent},
+                   {QStringLiteral("type"), LayerTypeName(layer.type)},
+                   {QStringLiteral("name"), layer.name},
+                   {QStringLiteral("visible"), layer.visible},
+                   {QStringLiteral("locked"), layer.locked}};
+  if (layer.type == LayerType::kImage) {
+    json.insert(QStringLiteral("image"), layer.image);
+    json.insert(QStringLiteral("x"), layer.image_pos.x());
+    json.insert(QStringLiteral("y"), layer.image_pos.y());
+    json.insert(QStringLiteral("scale"), layer.image_scale);
+  }
+  return json;
 }
 
 // A shape's look is written as colors, or null where it has no fill or no
@@ -199,6 +206,23 @@ std::optional<LoadedProject> ProjectJson::Read(const QByteArray& json,
     layer.name = json_layer.value(QStringLiteral("name")).toString();
     layer.visible = json_layer.value(QStringLiteral("visible")).toBool(true);
     layer.locked = json_layer.value(QStringLiteral("locked")).toBool(false);
+    const bool is_image =
+        json_layer.value(QStringLiteral("type")).toString() == u"image";
+    if (is_image) {
+      layer.type = LayerType::kImage;
+      layer.image = json_layer.value(QStringLiteral("image")).toString();
+      layer.image_pos =
+          QPointF(json_layer.value(QStringLiteral("x")).toDouble(),
+                  json_layer.value(QStringLiteral("y")).toDouble());
+      layer.image_scale = std::clamp(
+          json_layer.value(QStringLiteral("scale")).toDouble(1.0), 1e-3, 1e3);
+      if (!ImageStore::IsSafeName(layer.image)) {
+        warnings.Add(QStringLiteral("Layer %1 names a picture that can't be "
+                                    "read")
+                         .arg(layer.name));
+        layer.image.clear();
+      }
+    }
     // A parent must come earlier in the list.
     const Id parent = json_layer.value(QStringLiteral("parent")).toInt(kNoId);
     layer.parent = layer_ids.contains(parent) ? parent : kNoId;

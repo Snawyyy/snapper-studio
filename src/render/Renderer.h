@@ -5,6 +5,7 @@ class QPainter;
 namespace snapper {
 
 class Document;
+struct Layer;
 struct Shape;
 
 // Draws the artwork: the canvas page and every visible layer, bottom to
@@ -14,6 +15,8 @@ class Renderer {
   static void DrawPage(QPainter& painter, const Document& document);
   static void DrawLayers(QPainter& painter, const Document& document);
   static void DrawShape(QPainter& painter, const Shape& shape);
+  static void DrawPicture(QPainter& painter, const Document& document,
+                          const Layer& layer);
 };
 
 }  // namespace snapper

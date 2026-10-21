@@ -31,6 +31,10 @@ class LayerActions {
   void SetLocked(Id layer, bool locked);
   // +1 moves up one, -1 down one.
   void MoveLayer(Id layer, int steps);
+  // Adds a picture from a file as an image layer at the bottom, centered
+  // and shrunk to fit the canvas, ready to trace over. The active layer
+  // stays active.
+  bool ImportPicture(const QString& path, QString* why_not);
 
   // New Layer, Delete Layer, Lock Layer, Move Layer Up and Down. Rename
   // needs the panel and is added there.

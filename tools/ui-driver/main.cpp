@@ -21,6 +21,7 @@
 //   run COMMAND              run a command by id, like file.new
 //   save PATH                save the project there, no dialog
 //   open PATH                open the project there, no dialog
+//   import PATH              add a picture as an image layer, no dialog
 //   focus                    print which control has focus
 //   windows                  print every visible window and where it is
 //   quit                     stop (also happens at the end of the script)
@@ -43,6 +44,7 @@
 #include "app/ProjectIo.h"
 #include "app/Startup.h"
 #include "app/Studio.h"
+#include "edit/LayerActions.h"
 
 namespace {
 
@@ -189,6 +191,13 @@ class Driver : public QObject {
       if (!studio_.Project().OpenFrom(step.rest, &error)) {
         std::fprintf(stderr, "line %d: %s\n", step.line, qPrintable(error));
         Fail(step, "can't open");
+        return;
+      }
+    } else if (action == u"import" && step.words.size() > 1) {
+      QString error;
+      if (!studio_.Layers().ImportPicture(step.rest, &error)) {
+        std::fprintf(stderr, "line %d: %s\n", step.line, qPrintable(error));
+        Fail(step, "can't import");
         return;
       }
     } else if (action == u"focus") {

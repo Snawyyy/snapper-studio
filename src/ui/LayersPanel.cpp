@@ -1,7 +1,9 @@
 #include "ui/LayersPanel.h"
 
+#include <QFileDialog>
 #include <QHBoxLayout>
 #include <QListWidget>
+#include <QMessageBox>
 #include <QMouseEvent>
 #include <QPushButton>
 #include <QVBoxLayout>
@@ -76,6 +78,26 @@ void LayersPanel::RegisterCommands(CommandRegistry& commands) {
       .shortcut = QKeySequence(Qt::Key_F2),
       .run = [this] { RenameActive(); },
   });
+  commands.Add({
+      .id = QStringLiteral("layer.import-picture"),
+      .title = QStringLiteral("Import Picture"),
+      .shortcut = QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_I),
+      .run = [this] { ImportPicture(); },
+  });
+}
+
+void LayersPanel::ImportPicture() {
+  const QString path = QFileDialog::getOpenFileName(
+      window(), QStringLiteral("Import Picture"), QString(),
+      QStringLiteral("Pictures (*.png *.jpg *.jpeg *.webp *.bmp *.gif)"));
+  if (path.isEmpty()) {
+    return;
+  }
+  QString why_not;
+  if (!actions_.ImportPicture(path, &why_not)) {
+    QMessageBox::warning(
+        window(), QStringLiteral("Couldn't import the picture"), why_not);
+  }
 }
 
 void LayersPanel::RenameActive() {

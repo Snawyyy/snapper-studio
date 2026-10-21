@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QObject>
+#include <QPointF>
 #include <QString>
 
 #include <cstdint>
@@ -20,6 +21,11 @@ struct Layer {
   QString name{};
   bool visible = true;
   bool locked = false;
+  // Image layers: the picture's name in the image store, and where its top
+  // left corner sits on the canvas at what scale.
+  QString image{};
+  QPointF image_pos{};
+  double image_scale = 1.0;
 };
 
 // A layer taken out of the tree, with where it was, so it can go back.

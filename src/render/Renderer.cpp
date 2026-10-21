@@ -29,15 +29,32 @@ void Renderer::DrawLayers(QPainter& painter, const Document& document) {
   }
 
   for (size_t i = 0; i < layers.size(); ++i) {
-    const bool is_drawn =
-        layers[i].visible && layers[i].type == LayerType::kVector;
-    if (!is_drawn) {
+    const Layer& layer = layers[i];
+    if (!layer.visible) {
+      continue;
+    }
+    if (layer.type == LayerType::kImage) {
+      DrawPicture(painter, document, layer);
       continue;
     }
     for (const Shape* shape : by_layer[i]) {
       DrawShape(painter, *shape);
     }
   }
+}
+
+void Renderer::DrawPicture(QPainter& painter, const Document& document,
+                           const Layer& layer) {
+  const QImage* image = document.Images().Find(layer.image);
+  if (image == nullptr) {
+    return;
+  }
+  const QRectF target(layer.image_pos,
+                      image->size().toSizeF() * layer.image_scale);
+  painter.save();
+  painter.setRenderHint(QPainter::SmoothPixmapTransform);
+  painter.drawImage(target, *image);
+  painter.restore();
 }
 
 void Renderer::DrawShape(QPainter& painter, const Shape& shape) {

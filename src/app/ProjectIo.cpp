@@ -52,10 +52,14 @@ bool ProjectIo::WriteArchive(const QString& path,
   const QString temporary = path + QStringLiteral(".tmp");
   {
     ZipWriter zip;
-    const bool is_written =
+    bool is_written =
         zip.Open(temporary, error) &&
-        zip.Add(kProjectEntry, ProjectJson::Write(contents), error) &&
-        zip.Commit(error);
+        zip.Add(kProjectEntry, ProjectJson::Write(contents), error);
+    for (auto it = contents.images.cbegin();
+         is_written && it != contents.images.cend(); ++it) {
+      is_written = zip.Add(it.key(), it.value(), error);
+    }
+    is_written = is_written && zip.Commit(error);
     if (!is_written) {
       QFile::remove(temporary);
       return false;
@@ -82,7 +86,30 @@ std::optional<LoadedProject> ProjectIo::ReadArchive(const QString& path,
   if (!json.has_value()) {
     return std::nullopt;
   }
-  return ProjectJson::Read(*json, error);
+  std::optional<LoadedProject> loaded = ProjectJson::Read(*json, error);
+  if (!loaded.has_value()) {
+    return std::nullopt;
+  }
+  // Pictures sit beside project.json. A missing one leaves its layer
+  // empty.
+  for (const Layer& layer : loaded->contents.layers) {
+    const bool needs_picture = layer.type == LayerType::kImage &&
+                               !layer.image.isEmpty() &&
+                               !loaded->contents.images.contains(layer.image);
+    if (!needs_picture) {
+      continue;
+    }
+    QString picture_error;
+    const std::optional<QByteArray> bytes =
+        zip.Read(layer.image, &picture_error);
+    if (bytes.has_value()) {
+      loaded->contents.images.insert(layer.image, *bytes);
+    } else {
+      loaded->warnings.append(
+          QStringLiteral("The picture for %1 is missing").arg(layer.name));
+    }
+  }
+  return loaded;
 }
 
 bool ProjectIo::SaveTo(const QString& path, QString* error) {

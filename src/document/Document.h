@@ -5,6 +5,7 @@
 #include <QSize>
 
 #include "document/Ids.h"
+#include "document/ImageStore.h"
 #include "document/LayerManager.h"
 #include "document/ShapeManager.h"
 
@@ -25,6 +26,8 @@ struct DocumentContents {
   Id next_id = 1;
   std::vector<Layer> layers;
   std::vector<Shape> shapes;
+  // Picture file bytes by name.
+  QHash<QString, QByteArray> images;
 };
 
 // The whole project: the data managers plus canvas settings. Commands are
@@ -39,8 +42,10 @@ class Document : public QObject {
   // layer.
   void ResetToNew();
   // Empties everything and fills it from loaded contents. Items the
-  // managers refuse (bad ids, over the limits) are skipped and counted.
+  // managers refuse (bad ids, over the limits, unreadable pictures) are
+  // skipped and counted.
   int Replace(const DocumentContents& contents);
+  // Only the pictures some layer still uses are included.
   DocumentContents Contents() const;
 
   // A fresh id, never handed out before in this project.
@@ -56,6 +61,8 @@ class Document : public QObject {
   const LayerManager& Layers() const { return layers_; }
   ShapeManager& Shapes() { return shapes_; }
   const ShapeManager& Shapes() const { return shapes_; }
+  ImageStore& Images() { return images_; }
+  const ImageStore& Images() const { return images_; }
 
  Q_SIGNALS:
   void CanvasChanged();
@@ -67,6 +74,7 @@ class Document : public QObject {
   Id next_id_ = 1;
   LayerManager layers_;
   ShapeManager shapes_;
+  ImageStore images_;
 };
 
 }  // namespace snapper

@@ -36,6 +36,7 @@ class Studio {
   UndoManager& Undo() { return *undo_; }
   ToolManager& Tools() { return *tools_; }
   ProjectIo& Project() { return *project_; }
+  LayerActions& Layers() { return *layer_actions_; }
 
  private:
   void RegisterAppCommands();

@@ -9,6 +9,7 @@ Document::Document(QObject* parent) : QObject(parent) {}
 void Document::ResetToNew() {
   shapes_.Clear();
   layers_.Clear();
+  images_.Clear();
   canvas_ = CanvasSettings{};
   next_id_ = 1;
   layers_.Insert(Layer{.id = NewId(), .name = QStringLiteral("Layer 1")}, 0);
@@ -18,9 +19,16 @@ void Document::ResetToNew() {
 int Document::Replace(const DocumentContents& contents) {
   shapes_.Clear();
   layers_.Clear();
+  images_.Clear();
   canvas_ = contents.canvas;
   next_id_ = 1;
   int skipped = 0;
+  for (auto it = contents.images.cbegin(); it != contents.images.cend(); ++it) {
+    QString error;
+    if (!images_.AddNamed(it.key(), it.value(), &error)) {
+      ++skipped;
+    }
+  }
   for (const Layer& layer : contents.layers) {
     if (!layers_.Insert(layer, layers_.Count())) {
       ++skipped;
@@ -37,10 +45,20 @@ int Document::Replace(const DocumentContents& contents) {
 }
 
 DocumentContents Document::Contents() const {
-  return {.canvas = canvas_,
-          .next_id = next_id_,
-          .layers = layers_.All(),
-          .shapes = shapes_.All()};
+  DocumentContents contents{.canvas = canvas_,
+                            .next_id = next_id_,
+                            .layers = layers_.All(),
+                            .shapes = shapes_.All(),
+                            .images = {}};
+  for (const Layer& layer : contents.layers) {
+    const bool has_picture =
+        layer.type == LayerType::kImage && images_.All().contains(layer.image);
+    if (has_picture) {
+      contents.images.insert(layer.image,
+                             images_.All().value(layer.image).bytes);
+    }
+  }
+  return contents;
 }
 
 void Document::SetNextId(Id next) { next_id_ = std::max(next_id_, next); }

@@ -28,6 +28,8 @@ class LayersPanel : public QWidget {
   // Adds Rename Layer.
   void RegisterCommands(CommandRegistry& commands);
   void RenameActive();
+  // Asks for a picture file and adds it as an image layer.
+  void ImportPicture();
 
  protected:
   bool eventFilter(QObject* watched, QEvent* event) override;

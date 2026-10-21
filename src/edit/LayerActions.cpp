@@ -1,5 +1,8 @@
 #include "edit/LayerActions.h"
 
+#include <QFile>
+#include <QFileInfo>
+
 #include <algorithm>
 
 #include "app/CommandRegistry.h"
@@ -76,6 +79,44 @@ void LayerActions::MoveLayer(Id layer, int steps) {
   if (is_possible) {
     undo_.Push(std::make_unique<MoveLayerCommand>(document_, layer, to));
   }
+}
+
+bool LayerActions::ImportPicture(const QString& path, QString* why_not) {
+  QFile file(path);
+  if (!file.open(QIODevice::ReadOnly)) {
+    *why_not = QStringLiteral("Can't open %1").arg(path);
+    return false;
+  }
+  if (file.size() > ImageStore::kMaxBytes) {
+    *why_not = QStringLiteral("The picture is larger than 256 MB");
+    return false;
+  }
+  ImageStore& images = document_.Images();
+  const std::optional<QString> name = images.Add(file.readAll(), why_not);
+  if (!name.has_value()) {
+    return false;
+  }
+  const QSizeF picture = images.Find(*name)->size().toSizeF();
+  const QSizeF canvas = document_.Canvas().size.toSizeF();
+  const double scale = std::min({1.0, canvas.width() / picture.width(),
+                                 canvas.height() / picture.height()});
+  const QSizeF shown = picture * scale;
+  const Layer layer{
+      .id = document_.NewId(),
+      .type = LayerType::kImage,
+      .name = QFileInfo(path).completeBaseName(),
+      .image = *name,
+      .image_pos = QPointF((canvas.width() - shown.width()) / 2,
+                           (canvas.height() - shown.height()) / 2),
+      .image_scale = scale,
+  };
+  const Id active = selection_.ActiveLayer();
+  auto command = std::make_unique<AddLayerCommand>(document_, layer, 0);
+  command->setText(QStringLiteral("Import Picture"));
+  undo_.Push(std::move(command));
+  selection_.SetActiveLayer(active);
+  hint_(QStringLiteral("Added %1 below your drawing").arg(layer.name));
+  return true;
 }
 
 void LayerActions::RegisterCommands(CommandRegistry& commands) {

@@ -2,6 +2,7 @@
 #include <QTemporaryDir>
 #include <QTest>
 
+#include "TestStyles.h"
 #include "document/Document.h"
 #include "edit/BrushActions.h"
 #include "edit/LookManager.h"
@@ -62,9 +63,13 @@ class BrushActionsTest : public QObject {
     QVERIFY(!why_not.isEmpty());
   }
 
-  // The default style sets the brush, so the new look can't take one.
+  // Ink sets the brush, so the new look can't take one.
   void UseSaysWhenAStyleSetsTheBrush() {
     Fixture f;
+    const Id ink = snapper::test::AddInkStyle(f.document);
+    f.looks.Change(QString(), [ink](snapper::ShapeLookState& state) {
+      state.styles[0] = ink;
+    });
     const Id pencil = f.document.Brushes().All().front().id;
     f.actions.UseBrush(pencil);
     QCOMPARE(f.looks.NewShapes().look.brush, snapper::kNoId);

@@ -1,6 +1,7 @@
 #include <QTest>
 #include <QUndoStack>
 
+#include "TestStyles.h"
 #include "document/Document.h"
 #include "edit/LookManager.h"
 #include "edit/SelectionManager.h"
@@ -57,13 +58,13 @@ class StyleActionsTest : public QObject {
     Fixture f;
     const Id style = f.actions.NewStyle();
     QCOMPARE(f.looks.NewShapes().styles[0], style);
-    QCOMPARE(f.document.Styles().Find(style)->name, QStringLiteral("Style 2"));
+    QCOMPARE(f.document.Styles().Find(style)->name, QStringLiteral("Style 1"));
   }
 
   // Changing one style changes every shape that uses it.
   void EditingAStyleRestylesItsShapes() {
     Fixture f;
-    const Id ink = f.document.Styles().All().front().id;
+    const Id ink = snapper::test::AddInkStyle(f.document);
     std::vector<Id> lines;
     lines.reserve(3);
     for (int i = 0; i < 3; ++i) {
@@ -87,7 +88,7 @@ class StyleActionsTest : public QObject {
 
   void RenameIgnoresBlankNames() {
     Fixture f;
-    const Id ink = f.document.Styles().All().front().id;
+    const Id ink = snapper::test::AddInkStyle(f.document);
     f.actions.RenameStyle(ink, QStringLiteral("  "));
     QVERIFY(!f.undo.CanUndo());
     f.actions.RenameStyle(ink, QStringLiteral(" Skin "));

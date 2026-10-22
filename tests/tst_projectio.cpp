@@ -5,6 +5,7 @@
 #include <QTemporaryDir>
 #include <QTest>
 
+#include "TestStyles.h"
 #include "app/ProjectIo.h"
 #include "document/Document.h"
 #include "document/ProjectJson.h"
@@ -35,7 +36,7 @@ DocumentContents Sample() {
   }
   const snapper::Brush& chalk = document.Brushes().All()[2];
   shape.look.brush = chalk.id;
-  shape.styles = {document.Styles().All().front().id, snapper::kNoId};
+  shape.styles = {snapper::test::AddInkStyle(document), snapper::kNoId};
   document.Shapes().Insert(shape, 0);
   document.Layers().SetLocked(layer, true);
   snapper::Style skin{.id = document.NewId(), .name = QStringLiteral("Skin")};
@@ -108,8 +109,8 @@ class ProjectIoTest : public QObject {
     QCOMPARE(loaded.warnings.size(), 1);
   }
 
-  // A project from before styles gets the default style and brushes.
-  void Version1GetsStylesAndBrushes() {
+  // A project from before brushes gets the standard ones, and no styles.
+  void Version1GetsBrushes() {
     QJsonObject root = Parse(ProjectJson::Write(Sample()));
     root[QStringLiteral("version")] = 1;
     root.remove(QStringLiteral("styles"));
@@ -126,7 +127,7 @@ class ProjectIoTest : public QObject {
             .value_or(LoadedProject{});
     QVERIFY(loaded.warnings.isEmpty());
     const DocumentContents& back = loaded.contents;
-    QCOMPARE(back.styles.size(), size_t{1});
+    QVERIFY(back.styles.empty());
     QVERIFY(!back.brushes.empty());
     QCOMPARE(back.images.size(), static_cast<qsizetype>(back.brushes.size()));
     QVERIFY(back.next_id > back.brushes.back().id);

@@ -8,15 +8,6 @@ namespace snapper {
 
 Document::Document(QObject* parent) : QObject(parent) {}
 
-// Sets the line color and brush, so changing it restyles every line drawn
-// with it, while each line keeps the width it was drawn at.
-Style Document::DefaultStyle(Id id) {
-  Style style{.id = id, .name = QStringLiteral("Ink")};
-  style.parts.line = true;
-  style.parts.brush = true;
-  return style;
-}
-
 void Document::ResetToNew() {
   shapes_.Clear();
   layers_.Clear();
@@ -26,7 +17,6 @@ void Document::ResetToNew() {
   canvas_ = CanvasSettings{};
   next_id_ = 1;
   layers_.Insert(Layer{.id = NewId(), .name = QStringLiteral("Layer 1")}, 0);
-  styles_.Insert(DefaultStyle(NewId()), 0);
   AddStandardBrushes();
   Q_EMIT Reset();
 }

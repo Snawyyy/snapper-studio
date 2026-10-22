@@ -43,14 +43,13 @@ class Document : public QObject {
   explicit Document(QObject* parent = nullptr);
 
   // Empties everything and starts a project ready to draw: one vector
-  // layer, a default style and the standard brushes.
+  // layer and the standard brushes. Like Moho, it has no styles until the
+  // user makes one.
   void ResetToNew();
   // Empties everything and fills it from loaded contents. Items the
   // managers refuse (bad ids, over the limits, unreadable pictures) are
   // skipped and counted.
   int Replace(const DocumentContents& contents);
-  // The style a new project starts with.
-  static Style DefaultStyle(Id id);
   // Adds the brushes that come with the app, with their pictures. Returns
   // how many were added.
   int AddStandardBrushes();

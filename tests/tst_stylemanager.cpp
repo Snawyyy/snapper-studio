@@ -85,11 +85,11 @@ class StyleManagerTest : public QObject {
     QCOMPARE(missing, own);
   }
 
-  void NewProjectHasADefaultStyle() {
+  // Like Moho, styles only exist once the user makes them.
+  void NewProjectHasNoStyles() {
     snapper::Document document;
     document.ResetToNew();
-    QCOMPARE(document.Styles().Count(), 1);
-    QVERIFY(document.Styles().All().front().parts.line);
+    QCOMPARE(document.Styles().Count(), 0);
   }
 };
 

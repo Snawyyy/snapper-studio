@@ -1,5 +1,6 @@
 #include <QTest>
 
+#include "TestStyles.h"
 #include "document/Document.h"
 #include "edit/ShapeCommands.h"
 #include "edit/StyleCommands.h"
@@ -37,7 +38,8 @@ class StyleCommandsTest : public QObject {
     Document document;
     document.ResetToNew();
     UndoManager undo;
-    const Style original = document.Styles().All().front();
+    const Style original =
+        *document.Styles().Find(snapper::test::AddInkStyle(document));
     const int tag = snapper::MovePointsCommand::NewDragTag();
     Style edited = original;
     for (int width = 4; width <= 6; ++width) {
@@ -57,7 +59,8 @@ class StyleCommandsTest : public QObject {
     Document document;
     document.ResetToNew();
     UndoManager undo;
-    const Style original = document.Styles().All().front();
+    const Style original =
+        *document.Styles().Find(snapper::test::AddInkStyle(document));
     const int tag = snapper::MovePointsCommand::NewDragTag();
     Style edited = original;
     edited.look.line = Qt::red;
@@ -73,7 +76,7 @@ class StyleCommandsTest : public QObject {
     Document document;
     document.ResetToNew();
     UndoManager undo;
-    const Id style = document.Styles().All().front().id;
+    const Id style = snapper::test::AddInkStyle(document);
     const Id shape = AddLine(document, {style, snapper::kNoId}, snapper::kNoId);
     undo.Push(std::make_unique<snapper::RemoveStyleCommand>(document, style));
     QCOMPARE(document.Styles().Count(), 0);
@@ -88,7 +91,7 @@ class StyleCommandsTest : public QObject {
     document.ResetToNew();
     UndoManager undo;
     const Id brush = document.Brushes().All().front().id;
-    Style style = document.Styles().All().front();
+    Style style = *document.Styles().Find(snapper::test::AddInkStyle(document));
     style.look.brush = brush;
     document.Styles().Set(style);
     const Id shape = AddLine(document, {}, brush);

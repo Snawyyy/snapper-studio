@@ -2,6 +2,7 @@
 #include <QImage>
 #include <QTest>
 
+#include "TestStyles.h"
 #include "app/Theme.h"
 #include "document/Document.h"
 #include "edit/LookManager.h"
@@ -73,9 +74,13 @@ class EyedropperTest : public QObject {
     QCOMPARE(f.looks.NewShapes().look.fill, QColor(Qt::green));
   }
 
-  // New shapes take their line color from the default style.
+  // New shapes on Ink take their line color from it.
   void LineColorFromAStyleSaysSo() {
     Fixture f;
+    const Id ink = snapper::test::AddInkStyle(f.document);
+    f.looks.Change(QString(), [ink](snapper::ShapeLookState& state) {
+      state.styles[0] = ink;
+    });
     const EyedropperTool::Pick pick =
         f.tool.PickAt(f.At(QPointF(50, 20)))
             .value_or(

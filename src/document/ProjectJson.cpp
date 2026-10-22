@@ -109,10 +109,9 @@ CanvasSettings ReadCanvas(const QJsonObject& json) {
   return canvas;
 }
 
-// Version 1 had no styles or brushes. Projects from it get the ones a new
-// project starts with, under fresh ids.
+// Version 1 had no brushes. Projects from it get the ones a new project
+// starts with, under fresh ids.
 void UpgradeFrom1(DocumentContents& contents) {
-  contents.styles.push_back(Document::DefaultStyle(contents.next_id++));
   for (const StandardBrush& standard : StandardBrushes()) {
     Brush brush = standard.brush;
     brush.id = contents.next_id++;

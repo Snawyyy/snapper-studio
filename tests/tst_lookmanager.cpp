@@ -1,5 +1,6 @@
 #include <QTest>
 
+#include "TestStyles.h"
 #include "document/Document.h"
 #include "edit/LookManager.h"
 #include "edit/SelectionManager.h"
@@ -25,6 +26,14 @@ struct Fixture {
     return shape.id;
   }
 
+  Id UseInkForNewShapes() {
+    const Id ink = snapper::test::AddInkStyle(document);
+    looks.Change(QString(), [ink](snapper::ShapeLookState& state) {
+      state.styles[0] = ink;
+    });
+    return ink;
+  }
+
   snapper::Document document;
   snapper::UndoManager undo;
   snapper::SelectionManager selection{document};
@@ -41,10 +50,11 @@ class LookManagerTest : public QObject {
   Q_OBJECT
 
  private Q_SLOTS:
-  void NewShapesStartOnTheFirstStyle() {
-    Fixture f;
-    QCOMPARE(f.looks.NewShapes().styles[0],
-             f.document.Styles().All().front().id);
+  // Like Moho, a new project has no styles for new shapes to start on.
+  void NewShapesStartWithoutStyles() {
+    const Fixture f;
+    QCOMPARE(f.looks.NewShapes().styles,
+             (snapper::StylePair{snapper::kNoId, snapper::kNoId}));
   }
 
   // Nothing selected: the change goes to new shapes, outside undo.
@@ -74,7 +84,7 @@ class LookManagerTest : public QObject {
 
   void WidthSetByAStyleSaysSo() {
     Fixture f;
-    snapper::Style style = f.document.Styles().All().front();
+    snapper::Style style = *f.document.Styles().Find(f.UseInkForNewShapes());
     style.parts.width = true;
     f.document.Styles().Set(style);
     QCOMPARE(f.looks.StyleSetting(snapper::LookPart::kWidth), style.name);
@@ -94,7 +104,7 @@ class LookManagerTest : public QObject {
 
   void DeletedStyleLeavesNewShapes() {
     Fixture f;
-    const Id style = f.document.Styles().All().front().id;
+    const Id style = f.UseInkForNewShapes();
     f.document.Styles().Take(style);
     QCOMPARE(f.looks.NewShapes().styles[0], snapper::kNoId);
   }

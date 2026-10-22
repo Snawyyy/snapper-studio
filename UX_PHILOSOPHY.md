@@ -131,8 +131,9 @@ Every key can be rebound. These are the defaults.
    drag. Bending a bone on frame 0 shows the deformation and snaps back on
    release.
 5. **Sensible defaults.** A new project opens ready to draw: one vector
-   layer, a default style and a brush. A new bone layer uses region
-   binding, sized to the art.
+   layer and the standard brushes. Like Moho, it has no styles until you
+   make one, so the colors you pick go straight onto new shapes. A new
+   bone layer uses region binding, sized to the art.
 6. **Shared things look shared.** A shape using a style shows the style's
    name. Editing a style highlights every shape it will change.
 7. **No data loss.** Autosave, and recovery after a crash. Destructive

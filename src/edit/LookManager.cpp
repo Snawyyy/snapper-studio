@@ -160,8 +160,9 @@ void LookManager::RegisterCommands(CommandRegistry& commands) {
 void LookManager::KeepStylesValid(bool is_new_project) {
   const StyleManager& styles = document_.Styles();
   if (is_new_project) {
-    const Id first = styles.Count() == 0 ? kNoId : styles.All().front().id;
-    new_shapes_.styles = {first, kNoId};
+    // Like Moho, new shapes start with no styles, so the look editor's
+    // colors and brush go straight onto them.
+    new_shapes_.styles = {kNoId, kNoId};
     new_shapes_.look.brush = kNoId;
   }
   for (Id& style : new_shapes_.styles) {

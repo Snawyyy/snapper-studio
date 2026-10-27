@@ -33,6 +33,10 @@ FrameEvaluator::FrameEvaluator(const Document& document,
           changed);
   connect(&document_.Channels(), &ChannelManager::ChannelChanged, this,
           changed);
+  connect(&document_.Skeletons(), &SkeletonManager::BonesChanged, this,
+          changed);
+  connect(&document_.Bindings(), &BindingManager::LayerBindingChanged, this,
+          changed);
   connect(&document_, &Document::Reset, this, changed);
   connect(&playhead_, &Playhead::FrameChanged, this,
           [this] { Q_EMIT PoseChanged(); });
@@ -53,15 +57,76 @@ LayerTransform FrameEvaluator::TransformAt(const Document& document,
   return transform;
 }
 
-Pose FrameEvaluator::Evaluate(const Document& document, int frame) {
+BoneTransform FrameEvaluator::BoneTransformAt(const Document& document,
+                                              const Bone& bone, int frame) {
+  const ChannelManager& channels = document.Channels();
+  const BoneTransform& setup = bone.transform;
+  BoneTransform transform;
+  transform.position = Read(channels, bone.id, ChannelProperty::kBonePosition,
+                            setup.position, frame);
+  transform.angle = Read(channels, bone.id, ChannelProperty::kBoneAngle,
+                         QPointF(setup.angle, 0), frame)
+                        .x();
+  transform.scale = Read(channels, bone.id, ChannelProperty::kBoneScale,
+                         QPointF(setup.scale, 0), frame)
+                        .x();
+  return transform;
+}
+
+namespace {
+
+// Bone space to its bone layer's space. A parent's scale stretches it
+// along its length, so its children's bases move with its tip.
+QTransform BoneMatrix(const BoneTransform& transform, const PosedBone* parent,
+                      bool is_setup) {
+  if (parent == nullptr) {
+    return transform.Matrix();
+  }
+  const double stretch =
+      is_setup ? parent->setup_scale : parent->transform.scale;
+  BoneTransform placed = transform;
+  placed.position.setX(placed.position.x() * stretch);
+  return placed.Matrix() * (is_setup ? parent->setup_matrix : parent->matrix);
+}
+
+void PoseBones(const Document& document, int frame,
+               const QHash<Id, BoneTransform>& trial, Pose& pose) {
+  // Parents come first, so theirs is already posed.
+  for (const Bone& bone : document.Skeletons().All()) {
+    const PosedBone* parent = pose.FindBone(bone.parent);
+    PosedBone posed;
+    posed.layer = bone.layer;
+    posed.length = bone.length;
+    const auto tried = trial.constFind(bone.id);
+    posed.transform = tried != trial.cend() ? *tried
+                                            : FrameEvaluator::BoneTransformAt(
+                                                  document, bone, frame);
+    posed.setup_scale = bone.transform.scale;
+    posed.matrix = BoneMatrix(posed.transform, parent, false);
+    posed.setup_matrix = BoneMatrix(bone.transform, parent, true);
+    pose.bones.insert(bone.id, posed);
+  }
+}
+
+}  // namespace
+
+Pose FrameEvaluator::Evaluate(const Document& document, int frame,
+                              const QHash<Id, BoneTransform>& trial) {
   const ChannelManager& channels = document.Channels();
   Pose pose;
   pose.frame = frame;
+  PoseBones(document, frame, trial, pose);
   for (const Layer& layer : document.Layers().All()) {
     const LayerTransform transform = TransformAt(document, layer, frame);
     pose.layer_transforms.insert(layer.id, transform);
-    // Parents come first, so theirs is already there.
-    const QTransform outer = pose.LayerMatrix(layer.parent);
+    // Parents come first, so theirs is already there. A bound layer is
+    // carried from where its bone was in the setup pose to where it is,
+    // while it sits in that bone's layer.
+    const PosedBone* bone =
+        pose.FindBone(document.Bindings().BoneOfLayer(layer.id));
+    const bool is_following = bone != nullptr && bone->layer == layer.parent;
+    const QTransform follow = is_following ? bone->Follow() : QTransform();
+    const QTransform outer = follow * pose.LayerMatrix(layer.parent);
     pose.outer_matrices.insert(layer.id, outer);
     pose.layer_matrices.insert(layer.id,
                                transform.Matrix(layer.origin) * outer);
@@ -96,7 +161,21 @@ const Pose& FrameEvaluator::At(int frame) {
        it != kept_.end() && static_cast<int>(kept_.size()) >= kMaxKeptPoses;) {
     it = it->first == current ? std::next(it) : kept_.erase(it);
   }
-  return kept_.emplace(frame, Evaluate(document_, frame)).first->second;
+  const bool is_trial = frame == 0 && !trial_.isEmpty();
+  return kept_
+      .emplace(frame, Evaluate(document_, frame,
+                               is_trial ? trial_ : decltype(trial_){}))
+      .first->second;
+}
+
+void FrameEvaluator::SetTrial(QHash<Id, BoneTransform> trial) {
+  const bool is_same = trial.isEmpty() && trial_.isEmpty();
+  if (is_same) {
+    return;
+  }
+  trial_ = std::move(trial);
+  kept_.erase(0);
+  Q_EMIT PoseChanged();
 }
 
 const Pose& FrameEvaluator::Current() { return At(playhead_.Frame()); }

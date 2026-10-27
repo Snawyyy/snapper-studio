@@ -51,6 +51,7 @@ target_sources(snapper_core PRIVATE
   edit/UndoManager.cpp edit/UndoManager.h
   eval/Curves.cpp eval/Curves.h
   eval/FrameEvaluator.cpp eval/FrameEvaluator.h
+  eval/IkSolver.cpp eval/IkSolver.h
   eval/Pose.h
   render/ArtCache.cpp render/ArtCache.h
   render/OnionSkin.cpp render/OnionSkin.h

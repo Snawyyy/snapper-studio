@@ -10,11 +10,37 @@
 #include "document/Ids.h"
 #include "document/LayerManager.h"
 #include "document/ShapeManager.h"
+#include "document/SkeletonManager.h"
 
 namespace snapper {
 
+// A bone as it stands on one frame, in its bone layer's space.
+struct PosedBone {
+  Id layer = kNoId;
+  BoneTransform transform{};
+  double length = 0.0;
+  // Bone space to bone layer space, unstretched: the base at 0, the bone
+  // along x. The same for the setup pose.
+  QTransform matrix{};
+  QTransform setup_matrix{};
+  double setup_scale = 1.0;
+
+  QPointF Base() const { return matrix.map(QPointF(0, 0)); }
+  QPointF Tip() const {
+    return matrix.map(QPointF(length * transform.scale, 0));
+  }
+  // Moves art from where it sits in the setup pose to where it sits now.
+  QTransform Follow() const {
+    const QTransform setup =
+        QTransform::fromScale(setup_scale, 1) * setup_matrix;
+    return setup.inverted() * QTransform::fromScale(transform.scale, 1) *
+           matrix;
+  }
+};
+
 // The document as it stands on one frame: every shape with its points
-// where they sit then, in layer space, and where each layer sits.
+// where they sit then, in layer space, where each layer sits, and every
+// bone.
 struct Pose {
   int frame = 0;
   // In drawing order, the same as the shape manager's list.
@@ -25,12 +51,17 @@ struct Pose {
   // The space a layer's own transform sits in to canvas: its parent's
   // space, after any bone it follows.
   QHash<Id, QTransform> outer_matrices;
+  QHash<Id, PosedBone> bones;
   QHash<Id, int> shape_index;
   // Each point's shape and place in it.
   QHash<Id, std::pair<int, int>> point_index;
 
   QTransform LayerMatrix(Id layer) const {
     return layer_matrices.value(layer, QTransform());
+  }
+  const PosedBone* FindBone(Id bone) const {
+    const auto found = bones.constFind(bone);
+    return found == bones.cend() ? nullptr : &*found;
   }
   QTransform OuterMatrix(Id layer) const {
     return outer_matrices.value(layer, QTransform());

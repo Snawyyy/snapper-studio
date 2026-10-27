@@ -33,7 +33,7 @@ edits data directly: every change is a command that goes through undo.
 | `ShapeManager` | Vector layer contents: points, curves, shapes, and each shape's style ids. |
 | `SkeletonManager` | Bones of each bone layer: rest pose (frame 0), parent, length, strength (region size), constraints. |
 | `BindingManager` | What follows what: layer to bone, points to bones, region and flexi weights. |
-| `ChannelManager` | Every animated value is a channel with keys. Each key has a time, a value and a curve type. Bone angles, point offsets, layer transforms and switch choices are all channels. |
+| `ChannelManager` | Every animated value is a channel with keys, one per target and property. Each key has a frame, a value and a curve. Frame 0 is the setup pose, taken from the target itself. Point positions and layer transforms are channels now; bone angles and switch choices join later. |
 | `ActionManager` | Smart bone actions: a driving bone, an angle range, and their own channels holding point offsets from the rest pose. |
 
 These eight together are the `Document`. The `Document` holds them,
@@ -50,9 +50,11 @@ in fixed order:
 4. Deform points by their bindings (`BindingManager`).
 5. Pick the shown child of each switch layer.
 
-The result is a plain list of shapes with final positions and styles,
-ready to draw. Frames are cached by time, and an edit clears only the
-frames it affects.
+The result is a `Pose`: every shape with its points where they sit on
+that frame, in layer space, and each layer's transform. Drawing, hit
+tests and tools all read the pose for the playhead's frame, never the
+setup positions directly. Poses are kept by frame and dropped when the
+document changes. `Curves` holds the math of each key curve.
 
 ### Drawing
 | Manager | Job |
@@ -60,6 +62,7 @@ frames it affects.
 | `Renderer` | Draws a finished frame with `QPainter`: fills, plain lines, and hands brush lines to the brush stamper. |
 | `BrushStamper` | Stamps brush images along a line with spacing, turn and seeded jitter. The seed changes only on boil frames. |
 | `ArtCache` | Keeps the drawn artwork for the current view, so pen strokes and overlays never redraw every line. When drawing is slow, a moving view shows the old drawing moved along, drawn sharp once the view rests. |
+| `OnionSkin` | Draws nearby frames faded under the current one, earlier ones red and later ones green. |
 | `OverlayRenderer` | Draws the editing aids on top: bones, regions, selection, onion skin, mode border, and the shapes a style changes. |
 
 ### Editing
@@ -67,6 +70,9 @@ frames it affects.
 |---|---|
 | `UndoManager` | Wraps `QUndoStack`. Every edit is a command with do and undo. Selection changes are commands too. History is saved with the project. |
 | `SelectionManager` | What's selected (ids), per kind: points, shapes, bones, layers, keys. |
+| `Playhead` | The current frame, stepping, jumping to keys and playback, which loops over frames 1 to the last and stops back where it started. |
+| `AnimationEditor` | Turns a move into a change, Moho style: on frame 0 it edits the setup pose, on any other frame it sets keys there, only for what changed. |
+| `KeyActions` | Everything done to keys on the active layer, and which are selected: add (K), delete (Shift+K), retime, copy and set curves. The Timeline panel and the command list share it. |
 | `ToolManager` | The active tool, hold-to-switch, and handing pen events to the tool. Each tool is a class implementing a small `Tool` interface. |
 | `LookManager` | The look new shapes get, and look changes to the selected shapes (any shape with a selected point). With nothing selected, changes go to new shapes. |
 | `LayerActions`, `StyleActions`, `BrushActions` | Whole-object edits the panels and commands share: add, delete, rename, edit, import. Each builds commands for undo. |

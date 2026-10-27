@@ -26,7 +26,7 @@ that is unique in the project. Links between objects use ids.
 ```json
 {
   "format": "snapper",
-  "version": 2,
+  "version": 3,
   "app_version": "0.1.0",
   "canvas": { "width": 1920, "height": 1080, "fps": 24,
               "frames": 240, "background": "#FFFFFF" },
@@ -50,8 +50,11 @@ that is unique in the project. Links between objects use ids.
                   "strength": 40.0 } ],
   "bindings": [ { "kind": "layer", "layer": 11, "bone": 300 },
                 { "kind": "points", "points": [201, 202], "bone": 301 } ],
-  "channels": [ { "id": 400, "target": 300, "property": "angle",
-                  "keys": [ { "t": 12, "v": 0.8, "curve": "smooth" } ] } ],
+  "channels": [ { "target": 300, "property": "angle",
+                  "keys": [ { "t": 12, "v": 0.8, "curve": "smooth" } ] },
+                { "target": 201, "property": "point",
+                  "keys": [ { "t": 6, "x": 12.0, "y": 9.5,
+                              "curve": "noisy", "param": 4.0 } ] } ],
   "actions":  [ { "id": 500, "bone": 301, "min_angle": 0.0,
                   "max_angle": 2.4, "channels": [401, 402] } ]
 }
@@ -76,6 +79,20 @@ line, `angle_jitter` is in degrees either way, `spacing_jitter` and
 `size_jitter` are shares, and `boil_every` is the number of frames
 between new random stamps (0 never).
 
+A layer that has been moved, turned or scaled has an `origin` [x, y],
+the spot it turns and scales round in its own space, and a `transform`
+{ `x`, `y`, `angle`, `sx`, `sy` } for its setup pose on frame 0.
+
+A channel animates one `property` of its `target`: `point` (a point's
+position), or a layer's `position`, `angle` or `scale`. There is at most
+one per target and property. Frame 0 is the setup pose, taken from the
+target itself, so keys sit on frame `t` 1 and later. Angles have one
+value `v`, the others `x` and `y`. A key's `curve` shapes the span after
+it, up to the next key: `smooth`, `linear`, `step`, `ease_in`,
+`ease_out`, `ease_in_out`, `noisy`, `cycle`, `bounce` or `elastic`. For
+`noisy`, `param` is how far the value shakes; for `cycle`, how many
+frames back it loops, left out for back to the key before.
+
 Lists are flat. Trees (layers, bones) use `parent` ids, and parents are
 written before children, so loading needs one forward pass. `parent: 0`
 means top level.
@@ -84,7 +101,8 @@ means top level.
 
 - **Versioned.** `version` goes up whenever the format changes.
   Version 2 added styles and brushes: a version 1 project opens with the
-  default style and the standard brushes added. The app
+  default style and the standard brushes added. Version 3 added
+  channels and layer transforms, which older projects simply don't have. The app
   opens every older version by upgrading it step by step (1 to 2 to 3),
   one small function per step. A newer version than the app knows opens
   read-only, with a message.

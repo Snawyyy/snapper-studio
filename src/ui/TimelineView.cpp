@@ -41,7 +41,7 @@ TimelineView::TimelineView(const Document& document, Playhead& playhead,
   setObjectName(QStringLiteral("timeline"));
   setMouseTracking(true);
   // Every row shows, however small the panel is made.
-  setMinimumHeight(RowTop(kKeyRowCount) + 4);
+  setMinimumHeight(RowTop(kMaxKeyRows) + 4);
   const auto repaint = [this] { update(); };
   connect(&playhead_, &Playhead::FrameChanged, this, [this](int frame) {
     KeepFrameInView(frame);
@@ -51,10 +51,10 @@ TimelineView::TimelineView(const Document& document, Playhead& playhead,
   connect(&document_, &Document::CanvasChanged, this, repaint);
 }
 
-QSize TimelineView::sizeHint() const { return {600, RowTop(kKeyRowCount) + 4}; }
+QSize TimelineView::sizeHint() const { return {600, RowTop(kMaxKeyRows) + 4}; }
 
 QSize TimelineView::minimumSizeHint() const {
-  return {kLabelWidth + kSetupWidth + 100, RowTop(kKeyRowCount) + 4};
+  return {kLabelWidth + kSetupWidth + 100, RowTop(kMaxKeyRows) + 4};
 }
 
 int TimelineView::RowTop(int row) const {
@@ -65,8 +65,9 @@ int TimelineView::RowAt(double y) const {
   if (y < kRulerHeight) {
     return -1;
   }
-  return std::min(kKeyRowCount - 1,
-                  static_cast<int>((y - kRulerHeight) / kRowHeight));
+  const int count = static_cast<int>(keys_.Rows().size());
+  const int row = static_cast<int>((y - kRulerHeight) / kRowHeight);
+  return row < count ? row : -1;
 }
 
 double TimelineView::FrameLeft(int frame) const {
@@ -97,7 +98,7 @@ std::optional<KeyRef> TimelineView::KeyAt(const QPointF& pos) const {
     return std::nullopt;
   }
   const int frame = FrameAt(pos.x());
-  const auto kind = static_cast<KeyRow>(row);
+  const KeyRow kind = keys_.Rows()[static_cast<size_t>(row)];
   const std::vector<int> frames = keys_.FramesIn(kind);
   if (std::ranges::binary_search(frames, frame)) {
     return KeyRef{.row = kind, .frame = frame};
@@ -167,14 +168,15 @@ void TimelineView::DrawRows(QPainter& painter) const {
   painter.setFont(font);
   const int last = playhead_.LastFrame();
   const double end = std::min<double>(width(), FrameLeft(last) + cell_px_);
-  for (int row = 0; row < kKeyRowCount; ++row) {
+  const std::vector<KeyRow> rows = keys_.Rows();
+  for (int row = 0; row < static_cast<int>(rows.size()); ++row) {
     const int top = RowTop(row);
     painter.setPen(theme_.separator);
     painter.drawLine(0, top + kRowHeight, width(), top + kRowHeight);
     painter.setPen(row == 0 ? theme_.text : theme_.text_secondary);
     painter.drawText(QRect(8, top, kLabelWidth - 8, kRowHeight),
                      Qt::AlignVCenter | Qt::AlignLeft,
-                     KeyActions::RowName(static_cast<KeyRow>(row)));
+                     KeyRows::Name(rows[static_cast<size_t>(row)]));
   }
   // Every fifth frame is shaded a little, for counting at a glance.
   QColor shade = theme_.raised;
@@ -206,8 +208,9 @@ void TimelineView::DrawKeys(QPainter& painter) const {
   painter.setClipRect(
       QRect(kLabelWidth + kSetupWidth, kRulerHeight, width(), height()));
   const double radius = std::min<double>(kKeyRadius, cell_px_ / 2.0 + 1);
-  for (int row = 0; row < kKeyRowCount; ++row) {
-    const auto kind = static_cast<KeyRow>(row);
+  const std::vector<KeyRow> rows = keys_.Rows();
+  for (int row = 0; row < static_cast<int>(rows.size()); ++row) {
+    const KeyRow kind = rows[static_cast<size_t>(row)];
     const double middle = RowTop(row) + kRowHeight / 2.0;
     for (const int frame : keys_.FramesIn(kind)) {
       const KeyRef key{.row = kind, .frame = frame};

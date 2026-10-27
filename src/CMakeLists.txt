@@ -29,6 +29,7 @@ target_sources(snapper_core PRIVATE
   edit/BoneCommands.cpp edit/BoneCommands.h
   edit/KeyActions.cpp edit/KeyActions.h
   edit/KeyCommands.cpp edit/KeyCommands.h
+  edit/KeyRows.cpp edit/KeyRows.h
   edit/Playhead.cpp edit/Playhead.h
   edit/SelectionManager.cpp edit/SelectionManager.h
   edit/Tool.h

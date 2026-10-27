@@ -59,6 +59,36 @@ class KeyActionsTest : public QObject {
   Q_OBJECT
 
  private Q_SLOTS:
+  void BoneLayersShowTheirBonesKeys() {
+    Fixture f;
+    QCOMPARE(f.keys.Rows().size(), size_t{5});
+    const Id bones = f.document.NewId();
+    f.document.Layers().Insert({.id = bones, .type = snapper::LayerType::kBone},
+                               0);
+    const Id upper = f.document.NewId();
+    const Id fore = f.document.NewId();
+    f.document.Skeletons().Insert({.id = upper, .layer = bones}, 0);
+    f.document.Skeletons().Insert({.id = fore, .layer = bones}, 1);
+    f.selection.SetActiveLayer(bones);
+    QCOMPARE(f.keys.Rows().size(), size_t{snapper::kMaxKeyRows});
+    QCOMPARE(f.keys.Rows().back(), KeyRow::kBoneScale);
+    f.document.Channels().Put({.target = fore,
+                               .property = ChannelProperty::kBoneAngle,
+                               .keys = {{.frame = 4, .value = QPointF(1, 0)}}});
+    QCOMPARE(f.keys.FramesIn(KeyRow::kBoneRotate), std::vector<int>{4});
+    QVERIFY(f.keys.FramesIn(KeyRow::kBoneMove).empty());
+    // With a bone selected, the rows show only its keys, and K keys it.
+    f.selection.SetBones({upper});
+    QVERIFY(f.keys.FramesIn(KeyRow::kBoneRotate).empty());
+    f.playhead.SetFrame(6);
+    f.keys.AddKeys();
+    QCOMPARE(f.keys.FramesIn(KeyRow::kBoneRotate), std::vector<int>{6});
+    QVERIFY(f.document.Channels().Find(bones, ChannelProperty::kLayerAngle) ==
+            nullptr);
+    f.keys.DeleteKeys();
+    QVERIFY(f.keys.FramesIn(KeyRow::kBoneRotate).empty());
+  }
+
   void MovingOnFrameZeroChangesTheSetup() {
     Fixture f;
     f.MovePoint(QPointF(100, 40));

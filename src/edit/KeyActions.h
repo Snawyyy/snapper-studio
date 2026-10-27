@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "document/ChannelManager.h"
+#include "edit/KeyRows.h"
 
 namespace snapper {
 
@@ -18,19 +19,6 @@ class FrameEvaluator;
 class Playhead;
 class SelectionManager;
 class UndoManager;
-
-// The timeline's rows for the active layer, Moho style: every key, then
-// each kind of channel.
-enum class KeyRow : std::uint8_t { kAll, kMove, kRotate, kScale, kPoints };
-constexpr int kKeyRowCount = 5;
-
-// A key cell in the timeline: everything in the row on that frame.
-struct KeyRef {
-  KeyRow row = KeyRow::kAll;
-  int frame = 1;
-
-  bool operator==(const KeyRef&) const = default;
-};
 
 // Everything you can do to keys on the active layer: add, delete, retime,
 // copy and change their curves, plus which keys are selected. Each change
@@ -45,7 +33,8 @@ class KeyActions : public QObject {
              std::function<void(const QString&)> hint,
              QObject* parent = nullptr);
 
-  static QString RowName(KeyRow row);
+  // The rows the active layer shows, top first.
+  std::vector<KeyRow> Rows() const { return rows_.Rows(); }
 
   // Frames holding keys in the row, sorted.
   std::vector<int> FramesIn(KeyRow row) const;
@@ -58,11 +47,11 @@ class KeyActions : public QObject {
   // The curve the selected keys share, if they do.
   std::optional<Curve> SelectedCurve() const;
 
-  // Keys the selected points on the current frame, or the whole layer
-  // when no points are selected.
+  // Keys the selected points or bones on the current frame, or the whole
+  // layer when none are selected.
   void AddKeys();
   // Deletes the selected keys, or with none selected, the keys on the
-  // current frame for the selected points or the layer.
+  // current frame for the selected points or bones, or the layer.
   void DeleteKeys();
   // Moves the selected keys along by `frames`, or copies them there.
   void MoveSelected(int frames, bool copy);
@@ -76,9 +65,8 @@ class KeyActions : public QObject {
   void KeysChanged();
 
  private:
-  // The channels a row covers, as they are now. Missing ones come empty.
-  std::vector<Channel> ChannelsIn(KeyRow row) const;
-  std::vector<Channel> PointChannels(bool selected_only) const;
+  // Keys of the selected bones on the current frame, as posed now.
+  void AddBoneKeys(int frame);
   // Applies an edit to each channel the selected keys touch, and pushes
   // the changed ones as one undo step.
   void EditSelected(
@@ -93,6 +81,7 @@ class KeyActions : public QObject {
   Playhead& playhead_;
   FrameEvaluator& frames_;
   std::function<void(const QString&)> hint_;
+  KeyRows rows_;
   std::vector<KeyRef> selected_;
 };
 

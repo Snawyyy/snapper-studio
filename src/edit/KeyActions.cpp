@@ -23,24 +23,13 @@ constexpr double kNoisyMove = 4.0;
 constexpr double kNoisyAngle = 0.05;
 constexpr double kNoisyScale = 0.03;
 
-KeyRow RowOf(ChannelProperty property) {
-  switch (property) {
-    case ChannelProperty::kLayerPosition:
-      return KeyRow::kMove;
-    case ChannelProperty::kLayerAngle:
-      return KeyRow::kRotate;
-    case ChannelProperty::kLayerScale:
-      return KeyRow::kScale;
-    default:
-      return KeyRow::kPoints;
-  }
-}
-
 double NoisyAmount(ChannelProperty property) {
   switch (property) {
     case ChannelProperty::kLayerAngle:
+    case ChannelProperty::kBoneAngle:
       return kNoisyAngle;
     case ChannelProperty::kLayerScale:
+    case ChannelProperty::kBoneScale:
       return kNoisyScale;
     default:
       return kNoisyMove;
@@ -65,74 +54,28 @@ KeyActions::KeyActions(Document& document, SelectionManager& selection,
       undo_(undo),
       playhead_(playhead),
       frames_(frames),
-      hint_(std::move(hint)) {
+      hint_(std::move(hint)),
+      rows_(document, selection) {
   connect(&document_.Channels(), &ChannelManager::ChannelChanged, this,
           [this] { Q_EMIT KeysChanged(); });
   connect(&document_.Shapes(), &ShapeManager::LayerContentChanged, this,
           [this] { Q_EMIT KeysChanged(); });
-  const auto drop_selection = [this] { Select({}); };
+  // The rows themselves change with the layer.
+  const auto drop_selection = [this] {
+    Select({});
+    Q_EMIT KeysChanged();
+  };
   connect(&selection_, &SelectionManager::ActiveLayerChanged, this,
           drop_selection);
+  // The bone rows show the selected bones' keys.
+  connect(&selection_, &SelectionManager::BonesChanged, this,
+          [this] { Q_EMIT KeysChanged(); });
   connect(&document_, &Document::Reset, this, drop_selection);
-}
-
-QString KeyActions::RowName(KeyRow row) {
-  switch (row) {
-    case KeyRow::kAll:
-      return QStringLiteral("All");
-    case KeyRow::kMove:
-      return QStringLiteral("Move");
-    case KeyRow::kRotate:
-      return QStringLiteral("Rotate");
-    case KeyRow::kScale:
-      return QStringLiteral("Scale");
-    case KeyRow::kPoints:
-      return QStringLiteral("Points");
-  }
-  return {};
-}
-
-std::vector<Channel> KeyActions::PointChannels(bool selected_only) const {
-  std::vector<Channel> channels;
-  const Id layer = selection_.ActiveLayer();
-  for (const Shape& shape : document_.Shapes().All()) {
-    if (shape.layer != layer) {
-      continue;
-    }
-    for (const Point& point : shape.points) {
-      const bool is_wanted = !selected_only || selection_.IsSelected(point.id);
-      const Channel* channel =
-          is_wanted ? document_.Channels().Find(point.id,
-                                                ChannelProperty::kPointPosition)
-                    : nullptr;
-      if (channel != nullptr) {
-        channels.push_back(*channel);
-      }
-    }
-  }
-  return channels;
-}
-
-std::vector<Channel> KeyActions::ChannelsIn(KeyRow row) const {
-  const Id layer = selection_.ActiveLayer();
-  std::vector<Channel> channels;
-  for (const ChannelProperty property : AnimationEditor::kLayerProperties) {
-    const bool is_in_row = row == KeyRow::kAll || row == RowOf(property);
-    if (is_in_row) {
-      channels.push_back(document_.Channels().Get(layer, property));
-    }
-  }
-  const bool has_points = row == KeyRow::kAll || row == KeyRow::kPoints;
-  if (has_points) {
-    std::vector<Channel> points = PointChannels(false);
-    channels.insert(channels.end(), points.begin(), points.end());
-  }
-  return channels;
 }
 
 std::vector<int> KeyActions::FramesIn(KeyRow row) const {
   QSet<int> frames;
-  for (const Channel& channel : ChannelsIn(row)) {
+  for (const Channel& channel : rows_.ChannelsIn(row)) {
     for (const Key& key : channel.keys) {
       frames.insert(key.frame);
     }
@@ -144,7 +87,7 @@ std::vector<int> KeyActions::FramesIn(KeyRow row) const {
 
 std::optional<Curve> KeyActions::CurveAt(KeyRow row, int frame) const {
   std::optional<Curve> shared;
-  for (const Channel& channel : ChannelsIn(row)) {
+  for (const Channel& channel : rows_.ChannelsIn(row)) {
     const auto key = std::ranges::find(channel.keys, frame, &Key::frame);
     if (key == channel.keys.end()) {
       continue;
@@ -217,6 +160,11 @@ void KeyActions::AddKeys() {
     Push(QStringLiteral("Add Keyframe"), std::move(before), std::move(after));
     return;
   }
+  const bool has_bones = rows_.IsBoneLayer() && !selection_.Bones().isEmpty();
+  if (has_bones) {
+    AddBoneKeys(frame);
+    return;
+  }
   const Id layer = selection_.ActiveLayer();
   if (document_.Layers().Find(layer) == nullptr) {
     return;
@@ -227,6 +175,26 @@ void KeyActions::AddKeys() {
     before.push_back(channel);
     after.push_back(AnimationEditor::WithKey(
         std::move(channel), frame, AnimationEditor::ValueOf(now, property)));
+  }
+  Push(QStringLiteral("Add Keyframe"), std::move(before), std::move(after));
+}
+
+void KeyActions::AddBoneKeys(int frame) {
+  const Pose& pose = frames_.Current();
+  std::vector<Channel> before;
+  std::vector<Channel> after;
+  for (const Id bone : selection_.Bones()) {
+    const PosedBone* posed = pose.FindBone(bone);
+    if (posed == nullptr) {
+      continue;
+    }
+    for (const ChannelProperty property : AnimationEditor::kBoneProperties) {
+      Channel channel = document_.Channels().Get(bone, property);
+      before.push_back(channel);
+      after.push_back(AnimationEditor::WithKey(
+          std::move(channel), frame,
+          AnimationEditor::ValueOf(posed->transform, property)));
+    }
   }
   Push(QStringLiteral("Add Keyframe"), std::move(before), std::move(after));
 }
@@ -245,8 +213,10 @@ void KeyActions::DeleteKeys() {
   }
   const int frame = playhead_.Frame();
   const bool has_points = !selection_.Points().isEmpty();
-  std::vector<Channel> channels =
-      has_points ? PointChannels(true) : ChannelsIn(KeyRow::kAll);
+  const bool has_bones = rows_.IsBoneLayer() && !selection_.Bones().isEmpty();
+  std::vector<Channel> channels = has_points  ? rows_.PointChannels(true)
+                                  : has_bones ? rows_.BoneChannels()
+                                              : rows_.ChannelsIn(KeyRow::kAll);
   std::vector<Channel> before;
   std::vector<Channel> after;
   for (Channel& channel : channels) {
@@ -332,11 +302,11 @@ void KeyActions::EditSelected(
     const std::function<void(Channel&, const std::vector<int>&)>& edit) {
   std::vector<Channel> before;
   std::vector<Channel> after;
-  for (Channel& channel : ChannelsIn(KeyRow::kAll)) {
+  for (Channel& channel : rows_.ChannelsIn(KeyRow::kAll)) {
     std::vector<int> frames;
     for (const KeyRef& key : selected_) {
-      const bool is_in_row =
-          key.row == KeyRow::kAll || key.row == RowOf(channel.property);
+      const bool is_in_row = key.row == KeyRow::kAll ||
+                             key.row == KeyRows::RowOf(channel.property);
       if (is_in_row && HasKeyOn(channel, key.frame)) {
         frames.push_back(key.frame);
       }

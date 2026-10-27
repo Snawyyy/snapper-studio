@@ -11,7 +11,8 @@ bool BindingManager::BindLayer(Id layer, Id bone) {
     return false;
   }
   if (bone == kNoId) {
-    if (layer_bones_.remove(layer) > 0) {
+    const bool was_bound = layer_bones_.remove(layer);
+    if (was_bound) {
       Q_EMIT LayerBindingChanged(layer);
     }
     return true;

@@ -58,7 +58,7 @@ class FrameEvaluatorTest : public QObject {
 
  private Q_SLOTS:
   void ChildrenSitAtTheirParentsTip() {
-    Rig rig;
+    const Rig rig;
     const Pose pose = snapper::FrameEvaluator::Evaluate(rig.document, 0);
     QVERIFY(Near(pose.FindBone(rig.fore)->Base(), QPointF(150, 100)));
     QVERIFY(Near(pose.FindBone(rig.fore)->Tip(), QPointF(190, 100)));

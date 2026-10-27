@@ -138,12 +138,14 @@ class LayerManagerTest : public QObject {
   void StepIndexSkipsWholeBlocks() {
     LayerManager layers;
     FillTree(layers);
-    QVERIFY(layers.Place(1, snapper::kNoId, *layers.StepIndex(1, 1)));
+    const std::optional<int> up = layers.StepIndex(1, 1);
+    QVERIFY(up.has_value());
+    QVERIFY(layers.Place(1, snapper::kNoId, up.value_or(-1)));
     QCOMPARE(layers.IndexOf(1), 3);
     QCOMPARE(layers.IndexOf(2), 0);
     QVERIFY(!layers.StepIndex(5, 1).has_value());
     QVERIFY(!layers.StepIndex(4, 1).has_value());
-    QVERIFY(layers.Place(4, 2, *layers.StepIndex(4, -1)));
+    QVERIFY(layers.Place(4, 2, layers.StepIndex(4, -1).value_or(-1)));
     QCOMPARE(layers.IndexOf(4), 1);
   }
 

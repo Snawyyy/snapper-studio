@@ -42,8 +42,7 @@ class SkeletonManagerTest : public QObject {
     bones.Insert(BoneOf(2, 1), 1);
     QVERIFY(!bones.Take(1).has_value());
     const auto removed = bones.Take(2);
-    QVERIFY(removed.has_value());
-    QCOMPARE(removed->index, 1);
+    QCOMPARE(removed.value_or(snapper::RemovedBone{.index = -1}).index, 1);
     QVERIFY(bones.Take(1).has_value());
     QCOMPARE(bones.Count(), 0);
   }

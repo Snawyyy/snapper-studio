@@ -71,6 +71,7 @@ void ManipulateBonesTool::Drag(const ToolInput& input) {
   // pose never jumps between solutions.
   const Pose& pose = Context().frames.Current();
   std::vector<QPointF> bases;
+  bases.reserve(chain_.size());
   for (const Id id : chain_) {
     bases.push_back(pose.FindBone(id)->Base());
   }

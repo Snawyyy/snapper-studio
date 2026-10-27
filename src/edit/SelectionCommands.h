@@ -27,8 +27,25 @@ class SelectPointsCommand : public QUndoCommand {
   QSet<Id> after_;
 };
 
+// Changes which bones are selected.
+class SelectBonesCommand : public QUndoCommand {
+ public:
+  SelectBonesCommand(SelectionManager& selection, QSet<Id> before,
+                     QSet<Id> after);
+
+  void redo() override;
+  void undo() override;
+
+ private:
+  SelectionManager& selection_;
+  QSet<Id> before_;
+  QSet<Id> after_;
+};
+
 // Null when the selection would not change.
 std::unique_ptr<QUndoCommand> MakeSelectPoints(SelectionManager& selection,
                                                const QSet<Id>& after);
+std::unique_ptr<QUndoCommand> MakeSelectBones(SelectionManager& selection,
+                                              const QSet<Id>& after);
 
 }  // namespace snapper

@@ -26,6 +26,7 @@ target_sources(snapper_core PRIVATE
   document/SkeletonManager.cpp document/SkeletonManager.h
   document/StyleManager.cpp document/StyleManager.h
   edit/AnimationEditor.cpp edit/AnimationEditor.h
+  edit/BoneCommands.cpp edit/BoneCommands.h
   edit/KeyActions.cpp edit/KeyActions.h
   edit/KeyCommands.cpp edit/KeyCommands.h
   edit/Playhead.cpp edit/Playhead.h

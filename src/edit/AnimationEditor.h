@@ -10,6 +10,7 @@
 #include "document/ChannelManager.h"
 #include "document/LayerManager.h"
 #include "document/ShapeManager.h"
+#include "document/SkeletonManager.h"
 
 class QUndoCommand;
 
@@ -18,6 +19,11 @@ namespace snapper {
 class Document;
 class Playhead;
 
+struct BonePlacement {
+  Id bone = kNoId;
+  BoneTransform transform{};
+};
+
 // Turns edits on the canvas into changes, Moho style: on frame 0 they
 // change the setup pose, on any other frame they set keys there.
 class AnimationEditor {
@@ -25,6 +31,9 @@ class AnimationEditor {
   static constexpr std::array<ChannelProperty, 3> kLayerProperties = {
       ChannelProperty::kLayerPosition, ChannelProperty::kLayerAngle,
       ChannelProperty::kLayerScale};
+  static constexpr std::array<ChannelProperty, 3> kBoneProperties = {
+      ChannelProperty::kBonePosition, ChannelProperty::kBoneAngle,
+      ChannelProperty::kBoneScale};
 
   AnimationEditor(Document& document, const Playhead& playhead);
 
@@ -42,11 +51,18 @@ class AnimationEditor {
                                            std::optional<QPointF> origin,
                                            int drag_tag) const;
 
+  // Bones to new transforms on the current frame. Null when none of them
+  // exist.
+  std::unique_ptr<QUndoCommand> PlaceBones(const std::vector<BonePlacement>& to,
+                                           int drag_tag) const;
+
   // The channel with a key on the frame holding the value. A key already
   // there keeps its curve.
   static Channel WithKey(Channel channel, int frame, const QPointF& value);
   // A layer transform property as a channel value.
   static QPointF ValueOf(const LayerTransform& transform,
+                         ChannelProperty property);
+  static QPointF ValueOf(const BoneTransform& transform,
                          ChannelProperty property);
 
  private:

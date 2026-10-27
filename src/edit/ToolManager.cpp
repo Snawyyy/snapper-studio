@@ -45,13 +45,46 @@ void ToolManager::RegisterCommands(CommandRegistry& commands) {
     const ToolInfo info = tools_[i]->Info();
     const int index = static_cast<int>(i);
     const int key = info.key.isEmpty() ? 0 : info.key[0].key();
+    std::vector<int> sharing;
+    for (size_t j = 0; j < tools_.size(); ++j) {
+      const bool is_same_key =
+          !info.key.isEmpty() && tools_[j]->Info().key == info.key;
+      if (is_same_key) {
+        sharing.push_back(static_cast<int>(j));
+      }
+    }
+    // The first tool on a shared key owns the shortcut and picks; the
+    // others are still found by name.
+    const bool is_owner = sharing.size() <= 1 || sharing.front() == index;
     commands.Add({
         .id = QStringLiteral("tool.%1").arg(info.id),
         .title = QStringLiteral("%1 Tool").arg(info.title),
-        .shortcut = info.key,
-        .run = [this, index, key] { ActivateFromKey(index, key); },
+        .shortcut = is_owner ? info.key : QKeySequence(),
+        .run =
+            [this, index, key, sharing, is_owner] {
+              const bool is_shared = is_owner && sharing.size() > 1;
+              ActivateFromKey(is_shared ? PickForKey(sharing) : index, key);
+            },
     });
   }
+}
+
+void ToolManager::SetBoneLayerCheck(
+    std::function<bool()> is_bone_layer_active) {
+  is_bone_layer_active_ = std::move(is_bone_layer_active);
+}
+
+int ToolManager::PickForKey(const std::vector<int>& sharing) const {
+  const bool is_bone_layer =
+      is_bone_layer_active_ != nullptr && is_bone_layer_active_();
+  for (const int index : sharing) {
+    const bool is_for_bones =
+        tools_[static_cast<size_t>(index)]->Info().is_for_bone_layers;
+    if (is_for_bones == is_bone_layer) {
+      return index;
+    }
+  }
+  return sharing.front();
 }
 
 void ToolManager::Press(const ToolInput& input) {

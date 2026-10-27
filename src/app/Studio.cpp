@@ -21,10 +21,15 @@
 #include "edit/StyleActions.h"
 #include "edit/ToolManager.h"
 #include "edit/UndoManager.h"
+#include "edit/tools/AddBoneTool.h"
+#include "edit/tools/BindLayerTool.h"
 #include "edit/tools/EyedropperTool.h"
+#include "edit/tools/ManipulateBonesTool.h"
 #include "edit/tools/PenTool.h"
+#include "edit/tools/SelectBoneTool.h"
 #include "edit/tools/SelectTool.h"
 #include "edit/tools/ShapeTool.h"
+#include "edit/tools/TransformBoneTool.h"
 #include "edit/tools/TransformLayerTool.h"
 #include "eval/FrameEvaluator.h"
 #include "ui/BrushesPanel.h"
@@ -187,6 +192,16 @@ void Studio::CreateTools() {
        {ShapeTool::Kind::kRectangle, ShapeTool::Kind::kEllipse}) {
     tools_->Add(std::make_unique<ShapeTool>(context, kind));
   }
+
+  tools_->Add(std::make_unique<AddBoneTool>(context));
+  tools_->Add(std::make_unique<SelectBoneTool>(context));
+  tools_->Add(std::make_unique<TransformBoneTool>(context));
+  tools_->Add(std::make_unique<ManipulateBonesTool>(context));
+  tools_->Add(std::make_unique<BindLayerTool>(context));
+  tools_->SetBoneLayerCheck([this] {
+    const Layer* layer = document_->Layers().Find(selection_->ActiveLayer());
+    return layer != nullptr && layer->type == LayerType::kBone;
+  });
 
   auto eyedropper = std::make_unique<EyedropperTool>(context);
   EyedropperTool* dropper = eyedropper.get();

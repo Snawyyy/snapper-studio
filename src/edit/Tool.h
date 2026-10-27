@@ -54,6 +54,9 @@ struct ToolInfo {
   QString title;  // shown: "Pen"
   QKeySequence key;
   QString hint;  // shown in the status bar while the tool is active
+  // Its key is shared with a tool for other layers, Moho style: this one
+  // answers it while a bone layer is active.
+  bool is_for_bone_layers = false;
 };
 
 // A canvas tool. The tool manager hands it pointer events while it is

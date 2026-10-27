@@ -29,6 +29,36 @@ bool CanChangeActiveLayer(const ToolContext& context, const QString& action) {
   return true;
 }
 
+Id BoneLayerToEdit(const ToolContext& context, const QString& action) {
+  const LayerManager& layers = context.document.Layers();
+  const Id bone_layer = context.selection.BoneLayer();
+  const Layer* layer = layers.Find(bone_layer);
+  if (layer == nullptr) {
+    context.hint(
+        QStringLiteral("Pick a bone layer to %1 it, or make one with New Bone "
+                       "Layer")
+            .arg(action));
+    return kNoId;
+  }
+  if (!layers.IsShown(bone_layer)) {
+    context.hint(QStringLiteral("%1 is hidden: show it to %2 it")
+                     .arg(layer->name, action));
+    return kNoId;
+  }
+  if (layers.IsLocked(bone_layer)) {
+    context.hint(QStringLiteral("%1 is locked: unlock it to %2 it")
+                     .arg(layer->name, action));
+    return kNoId;
+  }
+  return bone_layer;
+}
+
+QPointF InBoneLayer(const ToolContext& context, Id bone_layer,
+                    const QPointF& canvas) {
+  const QTransform matrix = context.frames.Current().LayerMatrix(bone_layer);
+  return matrix.isInvertible() ? matrix.inverted().map(canvas) : canvas;
+}
+
 void MoveIntoLayer(const ToolContext& context, Shape& shape) {
   const QTransform matrix = context.frames.Current().LayerMatrix(shape.layer);
   const bool is_moved = !matrix.isIdentity() && matrix.isInvertible();

@@ -17,11 +17,19 @@ namespace {
 
 class FakeTool : public snapper::Tool {
  public:
-  FakeTool(snapper::ToolContext context, QString id, Qt::Key key)
-      : Tool(std::move(context)), id_(std::move(id)), key_(key) {}
+  FakeTool(snapper::ToolContext context, QString id, Qt::Key key,
+           bool is_for_bones = false)
+      : Tool(std::move(context)),
+        id_(std::move(id)),
+        key_(key),
+        is_for_bones_(is_for_bones) {}
 
   snapper::ToolInfo Info() const override {
-    return {.id = id_, .title = id_, .key = QKeySequence(key_), .hint = {}};
+    return {.id = id_,
+            .title = id_,
+            .key = QKeySequence(key_),
+            .hint = {},
+            .is_for_bone_layers = is_for_bones_};
   }
   void Press(const snapper::ToolInput& /*input*/) override { busy_ = true; }
   void Release(const snapper::ToolInput& /*input*/) override { busy_ = false; }
@@ -30,25 +38,29 @@ class FakeTool : public snapper::Tool {
  private:
   QString id_;
   Qt::Key key_;
+  bool is_for_bones_;
   bool busy_ = false;
 };
 
 struct Fixture {
   Fixture() {
     document.ResetToNew();
-    const snapper::ToolContext context{.document = document,
-                                       .undo = undo,
-                                       .selection = selection,
-                                       .looks = looks,
-                                       .frames = frames,
-                                       .animation = animation,
-                                       .theme = theme,
-                                       .hint = [](const QString&) {}};
-    tools.Add(
-        std::make_unique<FakeTool>(context, QStringLiteral("pen"), Qt::Key_P));
-    tools.Add(std::make_unique<FakeTool>(context, QStringLiteral("select"),
+    tools.Add(std::make_unique<FakeTool>(Context(), QStringLiteral("pen"),
+                                         Qt::Key_P));
+    tools.Add(std::make_unique<FakeTool>(Context(), QStringLiteral("select"),
                                          Qt::Key_V));
     tools.RegisterCommands(commands);
+  }
+
+  snapper::ToolContext Context() {
+    return {.document = document,
+            .undo = undo,
+            .selection = selection,
+            .looks = looks,
+            .frames = frames,
+            .animation = animation,
+            .theme = theme,
+            .hint = [](const QString&) {}};
   }
 
   snapper::Document document;
@@ -93,6 +105,28 @@ class ToolManagerTest : public QObject {
     QCOMPARE(f.tools.ActiveId(), QStringLiteral("select"));
     f.tools.Release({});
     QCOMPARE(f.tools.ActiveId(), QStringLiteral("pen"));
+  }
+
+  void ASharedKeyPicksTheToolForTheLayer() {
+    Fixture f;
+    ToolManager tools;
+    snapper::CommandRegistry commands;
+    bool is_bone_layer = false;
+    tools.Add(std::make_unique<FakeTool>(f.Context(), QStringLiteral("pen"),
+                                         Qt::Key_P));
+    tools.Add(std::make_unique<FakeTool>(f.Context(), QStringLiteral("layer"),
+                                         Qt::Key_T));
+    tools.Add(std::make_unique<FakeTool>(f.Context(), QStringLiteral("bone"),
+                                         Qt::Key_T, true));
+    tools.SetBoneLayerCheck([&] { return is_bone_layer; });
+    tools.RegisterCommands(commands);
+    commands.Run(QStringLiteral("tool.layer"));
+    QCOMPARE(tools.ActiveId(), QStringLiteral("layer"));
+    tools.Activate(QStringLiteral("pen"));
+    is_bone_layer = true;
+    commands.Run(QStringLiteral("tool.layer"));
+    QCOMPARE(tools.ActiveId(), QStringLiteral("bone"));
+    QVERIFY(commands.Find(QStringLiteral("tool.bone"))->shortcut.isEmpty());
   }
 
   void HoldingTheActiveToolKeyChangesNothing() {

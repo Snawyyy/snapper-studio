@@ -3,6 +3,7 @@
 #include <QElapsedTimer>
 #include <QObject>
 
+#include <functional>
 #include <memory>
 #include <vector>
 
@@ -35,8 +36,11 @@ class ToolManager : public QObject {
   QString ActiveId() const;
   const std::vector<std::unique_ptr<Tool>>& All() const { return tools_; }
 
-  // Adds a "<Tool> Tool" command per tool, on the tool's key.
+  // Adds a "<Tool> Tool" command per tool, on the tool's key. A key two
+  // tools share picks the one for the active layer's kind.
   void RegisterCommands(CommandRegistry& commands);
+  // Tells shared keys whether a bone layer is active.
+  void SetBoneLayerCheck(std::function<bool()> is_bone_layer_active);
 
   // From the canvas: pointer events go to the active tool.
   void Press(const ToolInput& input);
@@ -60,6 +64,8 @@ class ToolManager : public QObject {
 
  private:
   int IndexOf(const QString& id) const;
+  // The tool a shared key picks now, from the tools holding it.
+  int PickForKey(const std::vector<int>& sharing) const;
   void ActivateFromKey(int index, int key);
   void SwitchTo(int index);
   void FinishQuickSwitch();
@@ -71,6 +77,7 @@ class ToolManager : public QObject {
   int held_key_ = 0;
   QElapsedTimer held_for_;
   bool return_after_release_ = false;
+  std::function<bool()> is_bone_layer_active_;
 };
 
 }  // namespace snapper

@@ -33,8 +33,11 @@ target_sources(snapper_core PRIVATE
   edit/SelectionManager.cpp edit/SelectionManager.h
   edit/Tool.h
   edit/ToolManager.cpp edit/ToolManager.h
+  edit/tools/AddBoneTool.cpp edit/tools/AddBoneTool.h
+  edit/tools/BindLayerTool.cpp edit/tools/BindLayerTool.h
   edit/tools/EyedropperTool.cpp edit/tools/EyedropperTool.h
   edit/tools/LayerCheck.cpp edit/tools/LayerCheck.h
+  edit/tools/ManipulateBonesTool.cpp edit/tools/ManipulateBonesTool.h
   edit/tools/PenStroke.cpp edit/tools/PenStroke.h
   edit/tools/PenTool.cpp edit/tools/PenTool.h
   edit/tools/ShapeTool.cpp edit/tools/ShapeTool.h
@@ -44,7 +47,9 @@ target_sources(snapper_core PRIVATE
   edit/StyleActions.cpp edit/StyleActions.h
   edit/MacroCommand.h
   edit/SelectionCommands.cpp edit/SelectionCommands.h
+  edit/tools/SelectBoneTool.cpp edit/tools/SelectBoneTool.h
   edit/tools/SelectTool.cpp edit/tools/SelectTool.h
+  edit/tools/TransformBoneTool.cpp edit/tools/TransformBoneTool.h
   edit/tools/TransformLayerTool.cpp edit/tools/TransformLayerTool.h
   edit/LayerActions.cpp edit/LayerActions.h
   edit/LayerCommands.cpp edit/LayerCommands.h

@@ -4,6 +4,7 @@
 #include <QPointF>
 #include <QTransform>
 
+#include <cmath>
 #include <optional>
 #include <vector>
 
@@ -26,6 +27,17 @@ struct PosedBone {
   double setup_scale = 1.0;
 
   QPointF Base() const { return matrix.map(QPointF(0, 0)); }
+  // The way it points, in radians in bone layer space.
+  double Heading() const { return std::atan2(matrix.m12(), matrix.m11()); }
+  // A spot in bone layer space as the position a child of this bone
+  // would need to have its base there.
+  QPointF ChildPosition(const QPointF& spot) const {
+    QPointF position = matrix.inverted().map(spot);
+    if (std::abs(transform.scale) > 1e-9) {
+      position.setX(position.x() / transform.scale);
+    }
+    return position;
+  }
   QPointF Tip() const {
     return matrix.map(QPointF(length * transform.scale, 0));
   }

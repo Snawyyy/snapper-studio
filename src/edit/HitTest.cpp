@@ -3,6 +3,7 @@
 #include <QLineF>
 #include <QPainterPathStroker>
 
+#include <algorithm>
 #include <cmath>
 
 #include "document/Document.h"
@@ -105,6 +106,46 @@ Id HitTest::LayerAt(const Document& document, const Pose& pose,
     }
   }
   return kNoId;
+}
+
+BoneHit HitTest::BoneAt(const Pose& pose, Id bone_layer,
+                        const ViewTransform& view, const QPointF& screen) {
+  const QTransform to_screen =
+      pose.LayerMatrix(bone_layer) * view.ToScreenMatrix();
+  BoneHit best;
+  double best_distance = kBoneReachPx;
+  for (auto it = pose.bones.cbegin(); it != pose.bones.cend(); ++it) {
+    if (it->layer != bone_layer) {
+      continue;
+    }
+    const QPointF base = to_screen.map(it->Base());
+    const QPointF tip = to_screen.map(it->Tip());
+    const QPointF span = tip - base;
+    const double squared = QPointF::dotProduct(span, span);
+    const double along =
+        squared <= 0
+            ? 0.0
+            : std::clamp(QPointF::dotProduct(screen - base, span) / squared,
+                         0.0, 1.0);
+    const double distance = QLineF(base + span * along, screen).length();
+    // Ties go to the bone added later, which is drawn on top.
+    const bool is_nearer = distance < best_distance ||
+                           (distance == best_distance && best.bone != kNoId &&
+                            it.key() > best.bone);
+    if (!is_nearer) {
+      continue;
+    }
+    best_distance = distance;
+    const bool is_tip =
+        along > 0.7 || QLineF(tip, screen).length() <= kPointRadiusPx;
+    const bool is_base = !is_tip && along < 0.15;
+    best = {.bone = it.key(),
+            .part = is_tip    ? BonePart::kTip
+                    : is_base ? BonePart::kBase
+                              : BonePart::kBody,
+            .along = along};
+  }
+  return best;
 }
 
 QSet<Id> HitTest::PointsInside(const Pose& pose, Id layer,

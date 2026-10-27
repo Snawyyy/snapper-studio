@@ -8,6 +8,7 @@
 
 #include <algorithm>
 
+#include "document/BoneJson.h"
 #include "document/ChannelJson.h"
 #include "document/JsonWarnings.h"
 #include "document/LookJson.h"
@@ -153,6 +154,10 @@ QByteArray ProjectJson::Write(const DocumentContents& contents) {
       points.append(WritePoint(point));
     }
   }
+  QJsonArray bones;
+  for (const Bone& bone : contents.bones) {
+    bones.append(BoneJson::WriteBone(bone));
+  }
   QJsonArray channels;
   for (const Channel& channel : contents.channels) {
     channels.append(ChannelJson::WriteChannel(channel));
@@ -168,6 +173,9 @@ QByteArray ProjectJson::Write(const DocumentContents& contents) {
       {QStringLiteral("layers"), layers},
       {QStringLiteral("shapes"), shapes},
       {QStringLiteral("points"), points},
+      {QStringLiteral("bones"), bones},
+      {QStringLiteral("bindings"),
+       BoneJson::WriteBindings(contents.layer_bindings)},
       {QStringLiteral("channels"), channels},
   };
   return QJsonDocument(root).toJson(QJsonDocument::Indented);
@@ -381,9 +389,24 @@ std::optional<LoadedProject> ProjectJson::Read(const QByteArray& json,
     out.shapes.push_back(std::move(shape));
   }
 
+  QSet<Id> bone_layers;
+  for (const Layer& layer : out.layers) {
+    if (layer.type == LayerType::kBone) {
+      bone_layers.insert(layer.id);
+    }
+  }
+  out.bones = BoneJson::ReadBones(root.value(QStringLiteral("bones")).toArray(),
+                                  bone_layers, taken, highest, warnings);
+  QSet<Id> bone_ids;
+  for (const Bone& bone : out.bones) {
+    bone_ids.insert(bone.id);
+  }
+  out.layer_bindings =
+      BoneJson::ReadBindings(root.value(QStringLiteral("bindings")).toArray(),
+                             layer_ids, bone_ids, warnings);
   out.channels = ChannelJson::ReadChannels(
-      root.value(QStringLiteral("channels")).toArray(), layer_ids, out.shapes,
-      warnings);
+      root.value(QStringLiteral("channels")).toArray(), layer_ids, bone_ids,
+      out.shapes, warnings);
 
   out.next_id =
       std::max(root.value(QStringLiteral("next_id")).toInt(1), highest + 1);

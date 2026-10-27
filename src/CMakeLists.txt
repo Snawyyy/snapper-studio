@@ -9,6 +9,7 @@ target_sources(snapper_core PRIVATE
   app/ThemeManager.cpp app/ThemeManager.h
   app/ZipArchive.cpp app/ZipArchive.h
   document/BindingManager.cpp document/BindingManager.h
+  document/BoneJson.cpp document/BoneJson.h
   document/BrushManager.cpp document/BrushManager.h
   document/ChannelJson.cpp document/ChannelJson.h
   document/ChannelManager.cpp document/ChannelManager.h

@@ -23,7 +23,7 @@ class ProjectJson {
  public:
   // 2 added styles and brushes, 3 animation: channels and layer
   // transforms.
-  static constexpr int kVersion = 3;
+  static constexpr int kVersion = 4;
 
   static QByteArray Write(const DocumentContents& contents);
 

@@ -63,6 +63,47 @@ DocumentContents Sample() {
   return document.Contents();
 }
 
+// A bone layer holding the drawing, two bones, the drawing bound to the
+// second, and keys on both.
+DocumentContents Rig() {
+  snapper::Document document;
+  document.ResetToNew();
+  const snapper::Id drawing = document.Layers().All().front().id;
+  const snapper::Id bones = document.NewId();
+  document.Layers().Insert({.id = bones,
+                            .type = snapper::LayerType::kBone,
+                            .name = QStringLiteral("Body")},
+                           0);
+  document.Layers().Place(drawing, bones, 1);
+  const snapper::Id upper = document.NewId();
+  const snapper::Id fore = document.NewId();
+  document.Skeletons().Insert(
+      {.id = upper,
+       .layer = bones,
+       .name = QStringLiteral("upper_arm"),
+       .transform = {.position = QPointF(10, 20), .angle = 0.5, .scale = 1.5},
+       .length = 80,
+       .pinned = true},
+      0);
+  document.Skeletons().Insert({.id = fore,
+                               .layer = bones,
+                               .parent = upper,
+                               .transform = {.position = QPointF(80, 0)},
+                               .length = 60},
+                              1);
+  document.Bindings().BindLayer(drawing, fore);
+  document.Channels().Put({.target = fore,
+                           .property = snapper::ChannelProperty::kBoneAngle,
+                           .keys = {{.frame = 3, .value = QPointF(0.7, 0)}}});
+  document.Channels().Put({.target = upper,
+                           .property = snapper::ChannelProperty::kBoneScale,
+                           .keys = {{.frame = 5, .value = QPointF(2, 0)}}});
+  document.Channels().Put({.target = upper,
+                           .property = snapper::ChannelProperty::kBonePosition,
+                           .keys = {{.frame = 5, .value = QPointF(3, 4)}}});
+  return document.Contents();
+}
+
 QJsonObject Parse(const QByteArray& json) {
   return QJsonDocument::fromJson(json).object();
 }
@@ -109,6 +150,41 @@ class ProjectIoTest : public QObject {
     QCOMPARE(back.layers[0].transform, saved.layers[0].transform);
     QCOMPARE(back.layers[0].origin, QPointF(100, 50));
     QCOMPARE(back.channels, saved.channels);
+  }
+
+  void RigsRoundTrip() {
+    const DocumentContents saved = Rig();
+    QCOMPARE(saved.bones.size(), size_t{2});
+    QCOMPARE(saved.layer_bindings.size(), size_t{1});
+    QString error;
+    const LoadedProject loaded =
+        ProjectJson::Read(ProjectJson::Write(saved), &error)
+            .value_or(LoadedProject{});
+    QVERIFY2(error.isEmpty(), qPrintable(error));
+    QVERIFY(loaded.warnings.isEmpty());
+    QCOMPARE(loaded.contents.layers[0].type, snapper::LayerType::kBone);
+    QCOMPARE(loaded.contents.layers[1].parent, saved.layers[1].parent);
+    QCOMPARE(loaded.contents.bones, saved.bones);
+    QCOMPARE(loaded.contents.layer_bindings, saved.layer_bindings);
+    QCOMPARE(loaded.contents.channels, saved.channels);
+    snapper::Document document;
+    QCOMPARE(document.Replace(loaded.contents), 0);
+    QCOMPARE(document.Contents().bones, saved.bones);
+  }
+
+  void BonesOnMissingLayersAreDropped() {
+    QJsonObject root = Parse(ProjectJson::Write(Rig()));
+    QJsonArray layers = root[QStringLiteral("layers")].toArray();
+    layers.removeAt(0);
+    root[QStringLiteral("layers")] = layers;
+    QString error;
+    const LoadedProject loaded =
+        ProjectJson::Read(QJsonDocument(root).toJson(), &error)
+            .value_or(LoadedProject{});
+    QVERIFY(loaded.contents.bones.empty());
+    QVERIFY(loaded.contents.layer_bindings.empty());
+    QVERIFY(loaded.contents.channels.empty());
+    QVERIFY(!loaded.warnings.isEmpty());
   }
 
   void AnimationOfMissingPointsIsDropped() {

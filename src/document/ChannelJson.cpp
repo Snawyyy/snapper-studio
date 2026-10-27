@@ -49,7 +49,7 @@ double Finite(const QJsonValue& value, double fallback, double limit) {
 }  // namespace
 
 QJsonObject ChannelJson::WriteChannel(const Channel& channel) {
-  const bool is_single = channel.property == ChannelProperty::kLayerAngle;
+  const bool is_single = IsSingleValue(channel.property);
   QJsonArray keys;
   for (const Key& key : channel.keys) {
     QJsonObject json{{QStringLiteral("t"), key.frame},
@@ -91,8 +91,7 @@ void ChannelJson::WriteTransform(const Layer& layer, QJsonObject& json) {
 }
 
 std::optional<Channel> ChannelJson::ReadChannel(const QJsonObject& json,
-                                                const QSet<Id>& layers,
-                                                const QSet<Id>& points,
+                                                const Targets& targets,
                                                 JsonWarnings& warnings) {
   const std::optional<ChannelProperty> property =
       PropertyFrom(json.value(QStringLiteral("property")).toString());
@@ -104,20 +103,24 @@ std::optional<Channel> ChannelJson::ReadChannel(const QJsonObject& json,
   }
   const Id target = json.value(QStringLiteral("target")).toInt(kNoId);
   const bool is_point = *property == ChannelProperty::kPointPosition;
-  const bool has_target =
-      is_point ? points.contains(target) : layers.contains(target);
-  if (!has_target) {
-    warnings.Add(
-        QStringLiteral("Dropped the animation of %1 %2: it is "
-                       "missing")
-            .arg(is_point ? QStringLiteral("point") : QStringLiteral("layer"))
-            .arg(target));
+  const bool is_bone = IsBoneProperty(*property);
+  const QSet<Id>& kind =
+      is_point ? targets.points : (is_bone ? targets.bones : targets.layers);
+  if (!kind.contains(target)) {
+    const QString kind_name = is_point  ? QStringLiteral("point")
+                              : is_bone ? QStringLiteral("bone")
+                                        : QStringLiteral("layer");
+    warnings.Add(QStringLiteral("Dropped the animation of %1 %2: it is "
+                                "missing")
+                     .arg(kind_name)
+                     .arg(target));
     return std::nullopt;
   }
-  const bool is_single = *property == ChannelProperty::kLayerAngle;
-  const double fallback = *property == ChannelProperty::kLayerScale ? 1.0 : 0.0;
-  const double limit =
-      *property == ChannelProperty::kLayerScale ? kMaxScale : kMaxCoordinate;
+  const bool is_single = IsSingleValue(*property);
+  const bool is_scale = *property == ChannelProperty::kLayerScale ||
+                        *property == ChannelProperty::kBoneScale;
+  const double fallback = is_scale ? 1.0 : 0.0;
+  const double limit = is_scale ? kMaxScale : kMaxCoordinate;
   Channel channel{.target = target, .property = *property, .keys = {}};
   for (const QJsonValue value : json.value(QStringLiteral("keys")).toArray()) {
     if (static_cast<int>(channel.keys.size()) >=
@@ -137,9 +140,9 @@ std::optional<Channel> ChannelJson::ReadChannel(const QJsonObject& json,
         Finite(json_key.value(QStringLiteral("param")), 0, kMaxCoordinate);
     key.value =
         is_single
-            ? QPointF(Finite(json_key.value(QStringLiteral("v")), 0,
-                             kMaxCoordinate),
-                      0)
+            ? QPointF(
+                  Finite(json_key.value(QStringLiteral("v")), fallback, limit),
+                  0)
             : QPointF(
                   Finite(json_key.value(QStringLiteral("x")), fallback, limit),
                   Finite(json_key.value(QStringLiteral("y")), fallback, limit));
@@ -153,6 +156,7 @@ std::optional<Channel> ChannelJson::ReadChannel(const QJsonObject& json,
 
 std::vector<Channel> ChannelJson::ReadChannels(const QJsonArray& list,
                                                const QSet<Id>& layers,
+                                               const QSet<Id>& bones,
                                                const std::vector<Shape>& shapes,
                                                JsonWarnings& warnings) {
   QSet<Id> points;
@@ -169,8 +173,9 @@ std::vector<Channel> ChannelJson::ReadChannels(const QJsonArray& list,
       warnings.Add(QStringLiteral("Dropped animation past the limit"));
       break;
     }
-    std::optional<Channel> channel =
-        ReadChannel(value.toObject(), layers, points, warnings);
+    std::optional<Channel> channel = ReadChannel(
+        value.toObject(), {.layers = layers, .bones = bones, .points = points},
+        warnings);
     if (channel.has_value()) {
       channels.push_back(std::move(*channel));
     }

@@ -40,6 +40,7 @@ target_sources(snapper_core PRIVATE
   edit/MacroCommand.h
   edit/SelectionCommands.cpp edit/SelectionCommands.h
   edit/tools/SelectTool.cpp edit/tools/SelectTool.h
+  edit/tools/TransformLayerTool.cpp edit/tools/TransformLayerTool.h
   edit/LayerActions.cpp edit/LayerActions.h
   edit/LayerCommands.cpp edit/LayerCommands.h
   edit/ShapeCommands.cpp edit/ShapeCommands.h
@@ -73,6 +74,8 @@ target_sources(snapper_core PRIVATE
   ui/StudyNoteBox.cpp ui/StudyNoteBox.h
   ui/StyleEditor.cpp ui/StyleEditor.h
   ui/StylesPanel.cpp ui/StylesPanel.h
+  ui/TimelinePanel.cpp ui/TimelinePanel.h
+  ui/TimelineView.cpp ui/TimelineView.h
   ui/ToolOptionsPanel.cpp ui/ToolOptionsPanel.h
   ui/ViewNavigator.cpp ui/ViewNavigator.h
 )

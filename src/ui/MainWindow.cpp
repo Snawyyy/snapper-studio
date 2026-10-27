@@ -1,5 +1,7 @@
 #include "ui/MainWindow.h"
 
+#include <algorithm>
+
 #include <kddockwidgets/LayoutSaver.h>
 #include <kddockwidgets/qtwidgets/views/DockWidget.h>
 #include <kddockwidgets/qtwidgets/views/MainWindow.h>
@@ -84,7 +86,11 @@ void MainWindow::RegisterCommands(CommandRegistry& commands) {
 
 void MainWindow::SetPanelContent(Panel panel, QWidget* content) {
   auto* holder = new QWidget();
-  holder->setMinimumSize(kPanelMinWidth, kPanelMinHeight);
+  // Content that needs more room, like the timeline's rows, gets it.
+  holder->setMinimumSize(
+      kPanelMinWidth,
+      std::max(kPanelMinHeight,
+               content->minimumSizeHint().height() + 2 * kPanelPadding));
   auto* layout = new QVBoxLayout(holder);
   layout->setContentsMargins(kPanelPadding, kPanelPadding, kPanelPadding,
                              kPanelPadding);
@@ -150,7 +156,8 @@ void MainWindow::ArrangeDefaultLayout() {
   using KDDockWidgets::Location_OnLeft;
   using KDDockWidgets::Location_OnRight;
   const KDDockWidgets::InitialOption side_size(QSize(260, 0));
-  const KDDockWidgets::InitialOption timeline_size(QSize(0, 180));
+  // Tall enough for every row of keys.
+  const KDDockWidgets::InitialOption timeline_size(QSize(0, 270));
 
   window_->addDockWidget(panels_[kToolOptions], Location_OnLeft, nullptr,
                          side_size);

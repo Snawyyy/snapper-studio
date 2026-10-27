@@ -25,6 +25,7 @@
 #include "edit/tools/PenTool.h"
 #include "edit/tools/SelectTool.h"
 #include "edit/tools/ShapeTool.h"
+#include "edit/tools/TransformLayerTool.h"
 #include "eval/FrameEvaluator.h"
 #include "ui/BrushesPanel.h"
 #include "ui/CanvasView.h"
@@ -36,6 +37,7 @@
 #include "ui/PenOptions.h"
 #include "ui/StudyNoteBox.h"
 #include "ui/StylesPanel.h"
+#include "ui/TimelinePanel.h"
 #include "ui/ToolOptionsPanel.h"
 
 namespace snapper {
@@ -179,6 +181,7 @@ void Studio::CreateTools() {
                    }));
   tools_->Add(std::move(pen));
   tools_->Add(std::make_unique<SelectTool>(context));
+  tools_->Add(std::make_unique<TransformLayerTool>(context));
 
   for (const ShapeTool::Kind kind :
        {ShapeTool::Kind::kRectangle, ShapeTool::Kind::kEllipse}) {
@@ -265,6 +268,10 @@ void Studio::CreateTimeline() {
         return canvas_->hasFocus() && tools_->KeyPressed(key, modifiers);
       },
       [this] { return key_actions_->FramesIn(KeyRow::kAll); });
+  window_->SetPanelContent(
+      MainWindow::kTimeline,
+      new TimelinePanel(*document_, *playhead_, *key_actions_, *canvas_,
+                        theme_->CurrentTheme()));
 }
 
 void Studio::CreateStudy() {

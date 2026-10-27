@@ -48,6 +48,18 @@ DocumentContents Sample() {
   skin.look.line_width = 7.0F;
   skin.look.brush = chalk.id;
   document.Styles().Insert(skin, 1);
+  document.Layers().SetTransform(
+      layer, {.position = QPointF(5, 6), .angle = 0.5, .scale = QPointF(2, 3)},
+      QPointF(100, 50));
+  document.Channels().Put({.target = layer,
+                           .property = snapper::ChannelProperty::kLayerAngle,
+                           .keys = {{.frame = 4, .value = QPointF(1.25, 0)}}});
+  document.Channels().Put({.target = shape.points[1].id,
+                           .property = snapper::ChannelProperty::kPointPosition,
+                           .keys = {{.frame = 2,
+                                     .value = QPointF(7, 8),
+                                     .curve = snapper::Curve::kNoisy,
+                                     .param = 3}}});
   return document.Contents();
 }
 
@@ -94,6 +106,23 @@ class ProjectIoTest : public QObject {
     for (const snapper::Brush& brush : back.brushes) {
       QVERIFY(back.images.contains(brush.image));
     }
+    QCOMPARE(back.layers[0].transform, saved.layers[0].transform);
+    QCOMPARE(back.layers[0].origin, QPointF(100, 50));
+    QCOMPARE(back.channels, saved.channels);
+  }
+
+  void AnimationOfMissingPointsIsDropped() {
+    DocumentContents contents = Sample();
+    contents.channels.push_back(
+        {.target = 99999,
+         .property = snapper::ChannelProperty::kPointPosition,
+         .keys = {{.frame = 3, .value = QPointF(1, 1)}}});
+    QString error;
+    const LoadedProject loaded =
+        ProjectJson::Read(ProjectJson::Write(contents), &error)
+            .value_or(LoadedProject{});
+    QCOMPARE(loaded.contents.channels.size(), size_t{2});
+    QCOMPARE(loaded.warnings.size(), 1);
   }
 
   void MissingStyleLinksAreDroppedWithAWarning() {

@@ -8,6 +8,7 @@
 
 #include <algorithm>
 
+#include "document/ChannelJson.h"
 #include "document/JsonWarnings.h"
 #include "document/LookJson.h"
 #include "document/StandardBrushes.h"
@@ -46,6 +47,7 @@ QJsonObject WriteLayer(const Layer& layer) {
     json.insert(QStringLiteral("y"), layer.image_pos.y());
     json.insert(QStringLiteral("scale"), layer.image_scale);
   }
+  ChannelJson::WriteTransform(layer, json);
   return json;
 }
 
@@ -144,6 +146,10 @@ QByteArray ProjectJson::Write(const DocumentContents& contents) {
       points.append(WritePoint(point));
     }
   }
+  QJsonArray channels;
+  for (const Channel& channel : contents.channels) {
+    channels.append(ChannelJson::WriteChannel(channel));
+  }
   const QJsonObject root{
       {QStringLiteral("format"), QStringLiteral("snapper")},
       {QStringLiteral("version"), kVersion},
@@ -155,6 +161,7 @@ QByteArray ProjectJson::Write(const DocumentContents& contents) {
       {QStringLiteral("layers"), layers},
       {QStringLiteral("shapes"), shapes},
       {QStringLiteral("points"), points},
+      {QStringLiteral("channels"), channels},
   };
   return QJsonDocument(root).toJson(QJsonDocument::Indented);
 }
@@ -230,6 +237,7 @@ std::optional<LoadedProject> ProjectJson::Read(const QByteArray& json,
         layer.image.clear();
       }
     }
+    ChannelJson::ReadTransform(json_layer, layer);
     // A parent must come earlier in the list.
     const Id parent = json_layer.value(QStringLiteral("parent")).toInt(kNoId);
     layer.parent = layer_ids.contains(parent) ? parent : kNoId;
@@ -362,6 +370,10 @@ std::optional<LoadedProject> ProjectJson::Read(const QByteArray& json,
     highest = std::max(highest, shape.id);
     out.shapes.push_back(std::move(shape));
   }
+
+  out.channels = ChannelJson::ReadChannels(
+      root.value(QStringLiteral("channels")).toArray(), layer_ids, out.shapes,
+      warnings);
 
   out.next_id =
       std::max(root.value(QStringLiteral("next_id")).toInt(1), highest + 1);

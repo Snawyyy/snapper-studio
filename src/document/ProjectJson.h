@@ -21,8 +21,9 @@ struct LoadedProject {
 // with a warning, and the project still opens.
 class ProjectJson {
  public:
-  // 2 added styles and brushes.
-  static constexpr int kVersion = 2;
+  // 2 added styles and brushes, 3 animation: channels and layer
+  // transforms.
+  static constexpr int kVersion = 3;
 
   static QByteArray Write(const DocumentContents& contents);
 

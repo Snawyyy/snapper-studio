@@ -67,6 +67,7 @@ class CanvasView : public QWidget {
 
  private:
   void UpdateCursor();
+  void DrawBones(QPainter& painter, const Pose& pose) const;
   // The user moved the view, so resizing no longer refits it.
   void ViewMoved();
   // The artwork changed and must be drawn again.

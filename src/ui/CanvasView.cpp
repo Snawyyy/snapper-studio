@@ -57,6 +57,7 @@ CanvasView::CanvasView(Document& document, SelectionManager& selection,
   const auto repaint = [this] { update(); };
   connect(&selection_, &SelectionManager::PointsChanged, this, repaint);
   connect(&selection_, &SelectionManager::ActiveLayerChanged, this, repaint);
+  connect(&selection_, &SelectionManager::BonesChanged, this, repaint);
   connect(&document_, &Document::Reset, this, [this] {
     art_.Invalidate();
     FitCanvas();
@@ -180,10 +181,33 @@ void CanvasView::paintEvent(QPaintEvent* /*event*/) {
                                 theme_.canvas_surround);
   OverlayRenderer::DrawStyleUsers(painter, document_, pose, view_,
                                   highlighted_style_, theme_.accent);
+  DrawBones(painter, pose);
+  if (playhead_.Frame() == 0) {
+    OverlayRenderer::DrawModeBorder(painter, rect(), theme_.setup_mode,
+                                    QStringLiteral("Setup pose"), theme_);
+  }
   if (tools_ != nullptr) {
     painter.setClipping(false);
     tools_->DrawOverlay(painter, view_);
   }
+}
+
+// Shown while the bone layer or a layer inside it is active, faded for
+// the layer inside.
+void CanvasView::DrawBones(QPainter& painter, const Pose& pose) const {
+  const Id bone_layer = selection_.BoneLayer();
+  if (bone_layer == kNoId || !document_.Layers().IsShown(bone_layer)) {
+    return;
+  }
+  QSet<Id> pinned;
+  for (const Id id : document_.Skeletons().BonesOn(bone_layer)) {
+    if (document_.Skeletons().Find(id)->pinned) {
+      pinned.insert(id);
+    }
+  }
+  const bool is_faded = selection_.ActiveLayer() != bone_layer;
+  OverlayRenderer::DrawBones(painter, pose, view_, bone_layer,
+                             selection_.Bones(), is_faded, pinned, theme_);
 }
 
 void CanvasView::resizeEvent(QResizeEvent* event) {

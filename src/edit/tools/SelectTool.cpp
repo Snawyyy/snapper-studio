@@ -247,7 +247,7 @@ void SelectTool::MoveBy(const QPointF& canvas_delta) {
     position.pos += delta;
   }
   Context().undo.Push(
-      Context().animation.MovePoints(move_from_, std::move(to), move_tag_));
+      Context().animation.MovePoints(move_from_, to, move_tag_));
 }
 
 void SelectTool::FinishArea(const ToolInput& input) {

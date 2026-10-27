@@ -178,7 +178,7 @@ void TransformLayerTool::Turn(const ToolInput& input) {
   const double to = QLineF(pivot, input.canvas).angle();
   // QLineF angles run counterclockwise in degrees, and the canvas y axis
   // points down.
-  double turn = qDegreesToRadians(from - to);
+  const double turn = qDegreesToRadians(from - to);
   LayerTransform turned = start_;
   turned.angle = start_.angle + turn;
   if (input.modifiers.testFlag(Qt::ShiftModifier)) {

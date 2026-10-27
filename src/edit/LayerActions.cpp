@@ -137,6 +137,32 @@ bool LayerActions::PlaceLayer(Id layer, Id parent, int index,
   return true;
 }
 
+void LayerActions::DropLayer(Id layer, Id target, DropSpot spot) {
+  const LayerManager& layers = document_.Layers();
+  const Layer* found = layers.Find(target);
+  const int from = layers.IndexOf(layer);
+  if (found == nullptr || from < 0 || layer == target) {
+    return;
+  }
+  const bool is_into = spot == DropSpot::kInto;
+  if (is_into && !LayerManager::HoldsLayers(found->type)) {
+    hint_(QStringLiteral("Only bone layers hold other layers"));
+    return;
+  }
+  // Where it goes in the whole list, bottom to top, then in the list as it
+  // stands without the layer and the layers inside it.
+  int index =
+      spot == DropSpot::kBelow ? layers.IndexOf(target) : layers.EndOf(target);
+  if (index > from) {
+    index -= layers.EndOf(layer) - from;
+  }
+  const Id parent = is_into ? target : found->parent;
+  QString why_not;
+  if (!PlaceLayer(layer, parent, index, &why_not)) {
+    hint_(why_not);
+  }
+}
+
 bool LayerActions::ImportPicture(const QString& path, QString* why_not) {
   QFile file(path);
   if (!file.open(QIODevice::ReadOnly)) {

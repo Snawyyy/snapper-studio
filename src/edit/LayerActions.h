@@ -2,11 +2,16 @@
 
 #include <QString>
 
+#include <cstdint>
 #include <functional>
 
 #include "document/Ids.h"
 
 namespace snapper {
+
+// Where a layer dragged in the Layers panel lands, next to the row it was
+// dropped on.
+enum class DropSpot : std::uint8_t { kAbove, kBelow, kInto };
 
 class CommandRegistry;
 class Document;
@@ -39,6 +44,10 @@ class LayerActions {
   // Moves a layer into `parent` (kNoId for top level) at an index as for
   // LayerManager::Place. Fails, with a reason, where it can't go.
   bool PlaceLayer(Id layer, Id parent, int index, QString* why_not);
+  // Moves a layer dragged onto another layer's row: above or below it,
+  // beside it, or into it at the top when it is a bone layer. Hints why
+  // when it can't.
+  void DropLayer(Id layer, Id target, DropSpot spot);
   // Adds a picture from a file as an image layer at the bottom, centered
   // and shrunk to fit the canvas, ready to trace over. The active layer
   // stays active.

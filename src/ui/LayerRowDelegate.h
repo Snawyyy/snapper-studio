@@ -10,7 +10,9 @@
 namespace snapper {
 
 // Draws one row of the Layers panel: an eye to show or hide the layer, its
-// name, and a padlock. Renaming edits the name in place.
+// name indented by how deep it sits, a bone mark on bone layers, the bone
+// a layer follows, and a padlock. Renaming edits the name in place. While
+// a layer is dragged, the row under it shows where it would land.
 class LayerRowDelegate : public QStyledItemDelegate {
   Q_OBJECT
 
@@ -18,7 +20,14 @@ class LayerRowDelegate : public QStyledItemDelegate {
   static constexpr int kIdRole = Qt::UserRole;
   static constexpr int kVisibleRole = Qt::UserRole + 1;
   static constexpr int kLockedRole = Qt::UserRole + 2;
+  static constexpr int kDepthRole = Qt::UserRole + 3;
+  static constexpr int kIsBoneLayerRole = Qt::UserRole + 4;
+  // The name of the bone the layer follows, if any.
+  static constexpr int kBoundRole = Qt::UserRole + 5;
+  // 0 for none, else a DropSpot plus one.
+  static constexpr int kDropRole = Qt::UserRole + 6;
   static constexpr int kIconZone = 28;
+  static constexpr int kIndent = 14;
 
   LayerRowDelegate(const Theme& theme,
                    std::function<void(Id, const QString&)> on_rename,
@@ -40,6 +49,8 @@ class LayerRowDelegate : public QStyledItemDelegate {
  private:
   void DrawEye(QPainter& painter, const QRect& zone, bool visible) const;
   void DrawLock(QPainter& painter, const QRect& zone, bool locked) const;
+  void DrawBoneMark(QPainter& painter, const QRect& zone) const;
+  void DrawDrop(QPainter& painter, const QRect& row, int spot) const;
 
   const Theme& theme_;
   std::function<void(Id, const QString&)> on_rename_;

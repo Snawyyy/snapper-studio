@@ -5,6 +5,8 @@
 #include <QPainter>
 #include <QPainterPath>
 
+#include "edit/LayerActions.h"
+
 namespace snapper {
 
 namespace {
@@ -12,9 +14,17 @@ namespace {
 constexpr double kIconStroke = 1.5;
 constexpr int kIconSize = 14;
 
-QRect NameRect(const QRect& row) {
-  return row.adjusted(LayerRowDelegate::kIconZone, 0,
-                      -LayerRowDelegate::kIconZone, 0);
+constexpr int kBoneMarkZone = 18;
+constexpr int kBoundGap = 8;
+
+// Past the eye, the indent, and the bone mark when there is one.
+QRect NameRect(const QRect& row, const QModelIndex& index) {
+  const int depth = index.data(LayerRowDelegate::kDepthRole).toInt();
+  const bool has_mark = index.data(LayerRowDelegate::kIsBoneLayerRole).toBool();
+  const int left = LayerRowDelegate::kIconZone +
+                   depth * LayerRowDelegate::kIndent +
+                   (has_mark ? kBoneMarkZone : 0);
+  return row.adjusted(left, 0, -LayerRowDelegate::kIconZone, 0);
 }
 
 }  // namespace
@@ -48,13 +58,29 @@ void LayerRowDelegate::paint(QPainter* painter,
   const bool is_locked = index.data(kLockedRole).toBool();
   painter->save();
   painter->setRenderHint(QPainter::Antialiasing);
+  QRect name_rect = NameRect(opt.rect, index);
+  const QString bound = index.data(kBoundRole).toString();
+  if (!bound.isEmpty()) {
+    const QString shown = opt.fontMetrics.elidedText(bound, Qt::ElideRight,
+                                                     name_rect.width() / 2);
+    painter->setPen(theme_.text_secondary);
+    painter->drawText(name_rect, Qt::AlignRight | Qt::AlignVCenter, shown);
+    name_rect.setRight(name_rect.right() -
+                       opt.fontMetrics.horizontalAdvance(shown) - kBoundGap);
+  }
+  if (index.data(kIsBoneLayerRole).toBool()) {
+    DrawBoneMark(*painter,
+                 QRect(name_rect.left() - kBoneMarkZone, opt.rect.top(),
+                       kBoneMarkZone, opt.rect.height()));
+  }
   painter->setPen(is_visible ? theme_.text : theme_.text_secondary);
   const QString name =
       opt.fontMetrics.elidedText(index.data(Qt::DisplayRole).toString(),
-                                 Qt::ElideRight, NameRect(opt.rect).width());
-  painter->drawText(NameRect(opt.rect), Qt::AlignLeft | Qt::AlignVCenter, name);
+                                 Qt::ElideRight, name_rect.width());
+  painter->drawText(name_rect, Qt::AlignLeft | Qt::AlignVCenter, name);
   DrawEye(*painter, EyeRect(opt.rect), is_visible);
   DrawLock(*painter, LockRect(opt.rect), is_locked);
+  DrawDrop(*painter, opt.rect, index.data(kDropRole).toInt());
   painter->restore();
 }
 
@@ -74,10 +100,49 @@ void LayerRowDelegate::setModelData(QWidget* editor,
   }
 }
 
-void LayerRowDelegate::updateEditorGeometry(
-    QWidget* editor, const QStyleOptionViewItem& option,
-    const QModelIndex& /*index*/) const {
-  editor->setGeometry(NameRect(option.rect));
+void LayerRowDelegate::updateEditorGeometry(QWidget* editor,
+                                            const QStyleOptionViewItem& option,
+                                            const QModelIndex& index) const {
+  editor->setGeometry(NameRect(option.rect, index));
+}
+
+// A small bone, like the ones on the canvas.
+void LayerRowDelegate::DrawBoneMark(QPainter& painter,
+                                    const QRect& zone) const {
+  const QPointF center = QRectF(zone).center();
+  const double half = kIconSize / 2.0;
+  const QPointF base = center + QPointF(-half * 0.7, half * 0.7);
+  const QPointF tip = center + QPointF(half * 0.7, -half * 0.7);
+  const QPointF waist = base + (tip - base) * 0.25;
+  const QPointF side(2.2, 2.2);
+  const QPolygonF kite = {base, waist + QPointF(side.x(), side.y()), tip,
+                          waist - QPointF(side.x(), side.y())};
+  painter.setPen(QPen(theme_.text_secondary, kIconStroke, Qt::SolidLine,
+                      Qt::RoundCap, Qt::RoundJoin));
+  painter.setBrush(Qt::NoBrush);
+  painter.drawPolygon(kite);
+}
+
+// A line above or below the row, or a ring round it for into.
+void LayerRowDelegate::DrawDrop(QPainter& painter, const QRect& row,
+                                int spot) const {
+  if (spot == 0) {
+    return;
+  }
+  painter.setPen(QPen(theme_.accent, 2.0));
+  painter.setBrush(Qt::NoBrush);
+  const int above = static_cast<int>(DropSpot::kAbove) + 1;
+  const int below = static_cast<int>(DropSpot::kBelow) + 1;
+  if (spot == above) {
+    painter.drawLine(row.left() + kIconZone, row.top() + 1, row.right(),
+                     row.top() + 1);
+  } else if (spot == below) {
+    painter.drawLine(row.left() + kIconZone, row.bottom(), row.right(),
+                     row.bottom());
+  } else {
+    painter.drawRoundedRect(QRectF(row).adjusted(1, 1, -1, -1),
+                            theme_.radius_pill, theme_.radius_pill);
+  }
 }
 
 // An open eye, or a closed one when the layer is hidden.

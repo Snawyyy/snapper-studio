@@ -1,5 +1,6 @@
 #include "ui/LayersPanel.h"
 
+#include <QApplication>
 #include <QFileDialog>
 #include <QHBoxLayout>
 #include <QListWidget>
@@ -7,6 +8,8 @@
 #include <QMouseEvent>
 #include <QPushButton>
 #include <QVBoxLayout>
+
+#include <algorithm>
 
 #include "app/CommandRegistry.h"
 #include "document/Document.h"
@@ -24,7 +27,8 @@ LayersPanel::LayersPanel(Document& document, SelectionManager& selection,
       selection_(selection),
       actions_(actions),
       list_(new QListWidget(this)),
-      add_(new QPushButton(QStringLiteral("New Layer"), this)),
+      add_(new QPushButton(QStringLiteral("+ Layer"), this)),
+      add_bones_(new QPushButton(QStringLiteral("+ Bones"), this)),
       delete_(new QPushButton(QStringLiteral("Delete"), this)) {
   list_->setObjectName(QStringLiteral("layer-list"));
   list_->setItemDelegate(new LayerRowDelegate(
@@ -39,9 +43,21 @@ LayersPanel::LayersPanel(Document& document, SelectionManager& selection,
   list_->viewport()->installEventFilter(this);
 
   add_->setObjectName(QStringLiteral("layer-add"));
+  add_->setToolTip(
+      QStringLiteral("New Layer: a vector layer above the "
+                     "active one"));
+  add_bones_->setObjectName(QStringLiteral("layer-add-bones"));
+  add_bones_->setToolTip(
+      QStringLiteral("New Bone Layer: puts the active layer in a new bone "
+                     "layer"));
   delete_->setObjectName(QStringLiteral("layer-delete"));
+  // Three buttons share the narrow panel, so they pad less than others.
+  for (QPushButton* button : {add_, add_bones_, delete_}) {
+    button->setStyleSheet(QStringLiteral("padding: 6px 8px;"));
+  }
   auto* buttons = new QHBoxLayout();
   buttons->addWidget(add_);
+  buttons->addWidget(add_bones_);
   buttons->addWidget(delete_);
   buttons->addStretch();
 
@@ -51,6 +67,8 @@ LayersPanel::LayersPanel(Document& document, SelectionManager& selection,
   layout->addLayout(buttons);
 
   connect(add_, &QPushButton::clicked, this, [this] { actions_.AddLayer(); });
+  connect(add_bones_, &QPushButton::clicked, this,
+          [this] { actions_.AddBoneLayer(); });
   connect(delete_, &QPushButton::clicked, this, [this] {
     QString why_not;
     actions_.DeleteLayer(selection_.ActiveLayer(), &why_not);
@@ -67,6 +85,11 @@ LayersPanel::LayersPanel(Document& document, SelectionManager& selection,
   connect(&document_.Layers(), &LayerManager::LayerChanged, this,
           &LayersPanel::Refill);
   connect(&selection_, &SelectionManager::ActiveLayerChanged, this,
+          &LayersPanel::Refill);
+  // Rows name the bone each layer follows.
+  connect(&document_.Bindings(), &BindingManager::LayerBindingChanged, this,
+          &LayersPanel::Refill);
+  connect(&document_.Skeletons(), &SkeletonManager::BonesChanged, this,
           &LayersPanel::Refill);
   Refill();
 }
@@ -109,15 +132,114 @@ void LayersPanel::RenameActive() {
 }
 
 bool LayersPanel::eventFilter(QObject* watched, QEvent* event) {
-  const bool is_press =
-      watched == list_->viewport() && event->type() == QEvent::MouseButtonPress;
+  if (watched != list_->viewport()) {
+    return QWidget::eventFilter(watched, event);
+  }
+  const bool is_press = event->type() == QEvent::MouseButtonPress;
   if (is_press) {
     const auto* mouse = static_cast<QMouseEvent*>(event);
     if (HandleIconPress(mouse->position().toPoint())) {
       return true;
     }
   }
+  if (HandleDrag(event)) {
+    return true;
+  }
   return QWidget::eventFilter(watched, event);
+}
+
+bool LayersPanel::HandleDrag(const QEvent* event) {
+  const auto* mouse = static_cast<const QMouseEvent*>(event);
+  switch (event->type()) {
+    case QEvent::MouseButtonPress: {
+      const QListWidgetItem* item = list_->itemAt(mouse->position().toPoint());
+      const bool is_left = mouse->button() == Qt::LeftButton;
+      pressed_ = item != nullptr && is_left
+                     ? item->data(LayerRowDelegate::kIdRole).toInt()
+                     : kNoId;
+      press_pos_ = mouse->position().toPoint();
+      is_dragging_ = false;
+      return false;
+    }
+    case QEvent::MouseMove: {
+      const bool is_held =
+          pressed_ != kNoId && mouse->buttons().testFlag(Qt::LeftButton);
+      if (!is_held) {
+        return false;
+      }
+      const bool is_past_threshold =
+          (mouse->position().toPoint() - press_pos_).manhattanLength() >=
+          QApplication::startDragDistance();
+      if (is_past_threshold) {
+        is_dragging_ = true;
+      }
+      if (is_dragging_) {
+        ShowDropAt(mouse->position().toPoint());
+      }
+      return is_dragging_;
+    }
+    case QEvent::MouseButtonRelease: {
+      const bool was_dragging = is_dragging_;
+      const Id layer = pressed_;
+      const Id target = drop_target_;
+      const int spot = drop_spot_;
+      pressed_ = kNoId;
+      is_dragging_ = false;
+      ClearDrop();
+      const bool is_drop = was_dragging && target != kNoId && spot > 0;
+      if (is_drop) {
+        actions_.DropLayer(layer, target, static_cast<DropSpot>(spot - 1));
+      }
+      return was_dragging;
+    }
+    default:
+      return false;
+  }
+}
+
+// A bone layer row takes the layer inside below its top third; any other
+// row puts it above or below, by which half it is over.
+void LayersPanel::ShowDropAt(const QPoint& pos) {
+  QListWidgetItem* item = list_->itemAt(pos);
+  const Id target =
+      item == nullptr ? kNoId : item->data(LayerRowDelegate::kIdRole).toInt();
+  int spot = 0;
+  const bool is_on_other = target != kNoId && target != pressed_;
+  if (is_on_other) {
+    const QRect row = list_->visualItemRect(item);
+    const double share =
+        static_cast<double>(pos.y() - row.top()) / std::max(1, row.height());
+    const Layer* layer = document_.Layers().Find(target);
+    const bool is_bone_layer =
+        layer != nullptr && LayerManager::HoldsLayers(layer->type);
+    const bool holds_none = document_.Layers().EndOf(target) ==
+                            document_.Layers().IndexOf(target) + 1;
+    DropSpot drop = share < 0.5 ? DropSpot::kAbove : DropSpot::kBelow;
+    if (is_bone_layer) {
+      const bool is_bottom_edge = holds_none && share > 0.75;
+      drop = share < 0.3      ? DropSpot::kAbove
+             : is_bottom_edge ? DropSpot::kBelow
+                              : DropSpot::kInto;
+    }
+    spot = static_cast<int>(drop) + 1;
+  }
+  if (target == drop_target_ && spot == drop_spot_) {
+    return;
+  }
+  ClearDrop();
+  drop_target_ = target;
+  drop_spot_ = spot;
+  if (item != nullptr && spot > 0) {
+    item->setData(LayerRowDelegate::kDropRole, spot);
+  }
+}
+
+void LayersPanel::ClearDrop() {
+  for (int i = 0; i < list_->count(); ++i) {
+    list_->item(i)->setData(LayerRowDelegate::kDropRole, 0);
+  }
+  drop_target_ = kNoId;
+  drop_spot_ = 0;
 }
 
 bool LayersPanel::HandleIconPress(const QPoint& pos) {
@@ -145,14 +267,25 @@ bool LayersPanel::HandleIconPress(const QPoint& pos) {
 void LayersPanel::Refill() {
   const QSignalBlocker blocker(list_);
   list_->clear();
-  const std::vector<Layer>& layers = document_.Layers().All();
-  for (auto it = layers.rbegin(); it != layers.rend(); ++it) {
-    auto* item = new QListWidgetItem(it->name, list_);
-    item->setData(LayerRowDelegate::kIdRole, it->id);
-    item->setData(LayerRowDelegate::kVisibleRole, it->visible);
-    item->setData(LayerRowDelegate::kLockedRole, it->locked);
+  const LayerManager& layers = document_.Layers();
+  for (const int index : layers.TopFirst()) {
+    const Layer& layer = layers.All()[static_cast<size_t>(index)];
+    auto* item = new QListWidgetItem(layer.name, list_);
+    item->setData(LayerRowDelegate::kIdRole, layer.id);
+    item->setData(LayerRowDelegate::kVisibleRole, layer.visible);
+    item->setData(LayerRowDelegate::kLockedRole, layer.locked);
+    item->setData(LayerRowDelegate::kDepthRole, layers.DepthOf(layer.id));
+    item->setData(LayerRowDelegate::kIsBoneLayerRole,
+                  layer.type == LayerType::kBone);
+    const Bone* bone =
+        document_.Skeletons().Find(document_.Bindings().BoneOfLayer(layer.id));
+    const bool is_bound =
+        bone != nullptr && document_.CanBind(layer.id, bone->id);
+    if (is_bound) {
+      item->setData(LayerRowDelegate::kBoundRole, bone->name);
+    }
     item->setFlags(item->flags() | Qt::ItemIsEditable);
-    if (it->id == selection_.ActiveLayer()) {
+    if (layer.id == selection_.ActiveLayer()) {
       list_->setCurrentItem(item);
     }
   }

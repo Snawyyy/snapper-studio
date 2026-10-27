@@ -18,7 +18,7 @@ namespace snapper {
 
 namespace {
 
-constexpr int kLabelWidth = 64;
+constexpr int kLabelWidth = 84;
 constexpr int kSetupWidth = 48;
 constexpr int kRulerHeight = 22;
 // Shorter than list rows, so every row fits a short panel. Still a big

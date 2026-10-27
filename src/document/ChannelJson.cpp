@@ -21,11 +21,15 @@ struct PropertyName {
   const char* name;
 };
 
-constexpr std::array<PropertyName, 4> kPropertyNames = {{
+// In the order of ChannelProperty.
+constexpr std::array<PropertyName, kChannelPropertyCount> kPropertyNames = {{
     {ChannelProperty::kPointPosition, "point"},
     {ChannelProperty::kLayerPosition, "position"},
     {ChannelProperty::kLayerAngle, "angle"},
     {ChannelProperty::kLayerScale, "scale"},
+    {ChannelProperty::kBonePosition, "bone_position"},
+    {ChannelProperty::kBoneAngle, "bone_angle"},
+    {ChannelProperty::kBoneScale, "bone_scale"},
 }};
 
 std::optional<ChannelProperty> PropertyFrom(const QString& name) {

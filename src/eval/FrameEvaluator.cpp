@@ -17,7 +17,7 @@ QPointF Read(const ChannelManager& channels, Id target,
     return setup;
   }
   // Each channel of a target shakes differently.
-  const Id seed = target * 4 + static_cast<Id>(property);
+  const Id seed = target * kChannelPropertyCount + static_cast<Id>(property);
   return Curves::ValueAt(channel->keys, setup, frame, seed);
 }
 

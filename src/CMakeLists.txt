@@ -21,6 +21,7 @@ target_sources(snapper_core PRIVATE
   document/ShapeLook.h
   document/StandardBrushes.cpp document/StandardBrushes.h
   document/ShapeManager.cpp document/ShapeManager.h
+  document/SkeletonManager.cpp document/SkeletonManager.h
   document/StyleManager.cpp document/StyleManager.h
   edit/AnimationEditor.cpp edit/AnimationEditor.h
   edit/KeyActions.cpp edit/KeyActions.h

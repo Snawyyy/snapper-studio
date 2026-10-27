@@ -10,6 +10,7 @@ Document::Document(QObject* parent) : QObject(parent) {}
 
 void Document::ResetToNew() {
   channels_.Clear();
+  skeletons_.Clear();
   shapes_.Clear();
   layers_.Clear();
   styles_.Clear();
@@ -24,6 +25,7 @@ void Document::ResetToNew() {
 
 int Document::Replace(const DocumentContents& contents) {
   channels_.Clear();
+  skeletons_.Clear();
   shapes_.Clear();
   layers_.Clear();
   styles_.Clear();
@@ -64,6 +66,16 @@ int Document::Replace(const DocumentContents& contents) {
       ++skipped;
     }
   }
+  for (const Bone& bone : contents.bones) {
+    const Layer* layer = layers_.Find(bone.layer);
+    const bool is_on_bone_layer =
+        layer != nullptr && layer->type == LayerType::kBone;
+    const bool is_added =
+        is_on_bone_layer && skeletons_.Insert(bone, skeletons_.Count());
+    if (!is_added) {
+      ++skipped;
+    }
+  }
   for (const Channel& channel : contents.channels) {
     if (!channels_.Put(channel)) {
       ++skipped;
@@ -81,15 +93,18 @@ DocumentContents Document::Contents() const {
                             .shapes = shapes_.All(),
                             .styles = styles_.All(),
                             .brushes = brushes_.All(),
+                            .bones = {},
                             .channels = {},
                             .images = {}};
-  // Deleting a layer or points leaves their channels behind, for undo.
+  // Deleting a layer leaves its bones behind, and deleting a layer, bones
+  // or points leaves their channels behind, for undo.
+  for (const Bone& bone : skeletons_.All()) {
+    if (layers_.Find(bone.layer) != nullptr) {
+      contents.bones.push_back(bone);
+    }
+  }
   for (const Channel& channel : channels_.All()) {
-    const bool is_point = channel.property == ChannelProperty::kPointPosition;
-    const bool is_alive = is_point
-                              ? shapes_.ShapeOfPoint(channel.target) != kNoId
-                              : layers_.Find(channel.target) != nullptr;
-    if (is_alive) {
+    if (IsAlive(channel)) {
       contents.channels.push_back(channel);
     }
   }
@@ -126,6 +141,17 @@ int Document::AddStandardBrushes() {
     }
   }
   return added;
+}
+
+bool Document::IsAlive(const Channel& channel) const {
+  if (channel.property == ChannelProperty::kPointPosition) {
+    return shapes_.ShapeOfPoint(channel.target) != kNoId;
+  }
+  if (IsBoneProperty(channel.property)) {
+    const Bone* bone = skeletons_.Find(channel.target);
+    return bone != nullptr && layers_.Find(bone->layer) != nullptr;
+  }
+  return layers_.Find(channel.target) != nullptr;
 }
 
 void Document::SetNextId(Id next) { next_id_ = std::max(next_id_, next); }

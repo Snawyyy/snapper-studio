@@ -18,7 +18,24 @@ enum class ChannelProperty : std::uint8_t {
   kLayerPosition,
   kLayerAngle,
   kLayerScale,
+  kBonePosition,
+  kBoneAngle,
+  kBoneScale,
 };
+constexpr int kChannelPropertyCount = 7;
+
+// True for properties held in x alone.
+constexpr bool IsSingleValue(ChannelProperty property) {
+  return property == ChannelProperty::kLayerAngle ||
+         property == ChannelProperty::kBoneAngle ||
+         property == ChannelProperty::kBoneScale;
+}
+
+constexpr bool IsBoneProperty(ChannelProperty property) {
+  return property == ChannelProperty::kBonePosition ||
+         property == ChannelProperty::kBoneAngle ||
+         property == ChannelProperty::kBoneScale;
+}
 
 // How a key moves on to the next one. A key's curve covers only the span
 // after it.

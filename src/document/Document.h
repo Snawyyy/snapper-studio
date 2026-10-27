@@ -10,6 +10,7 @@
 #include "document/ImageStore.h"
 #include "document/LayerManager.h"
 #include "document/ShapeManager.h"
+#include "document/SkeletonManager.h"
 #include "document/StyleManager.h"
 
 namespace snapper {
@@ -31,6 +32,7 @@ struct DocumentContents {
   std::vector<Shape> shapes;
   std::vector<Style> styles;
   std::vector<Brush> brushes;
+  std::vector<Bone> bones;
   std::vector<Channel> channels;
   // Picture file bytes by name, for image layers and brushes.
   QHash<QString, QByteArray> images;
@@ -56,7 +58,7 @@ class Document : public QObject {
   // how many were added.
   int AddStandardBrushes();
   // Only the pictures some layer or brush still uses are included, and
-  // only the channels of layers and points that still exist.
+  // only the bones, channels and bindings of things that still exist.
   DocumentContents Contents() const;
 
   // A fresh id, never handed out before in this project.
@@ -76,10 +78,15 @@ class Document : public QObject {
   const StyleManager& Styles() const { return styles_; }
   BrushManager& Brushes() { return brushes_; }
   const BrushManager& Brushes() const { return brushes_; }
+  SkeletonManager& Skeletons() { return skeletons_; }
+  const SkeletonManager& Skeletons() const { return skeletons_; }
   ChannelManager& Channels() { return channels_; }
   const ChannelManager& Channels() const { return channels_; }
   ImageStore& Images() { return images_; }
   const ImageStore& Images() const { return images_; }
+
+  // True when the channel's target is still in the project.
+  bool IsAlive(const Channel& channel) const;
 
  Q_SIGNALS:
   void CanvasChanged();
@@ -93,6 +100,7 @@ class Document : public QObject {
   ShapeManager shapes_;
   StyleManager styles_;
   BrushManager brushes_;
+  SkeletonManager skeletons_;
   ChannelManager channels_;
   ImageStore images_;
 };

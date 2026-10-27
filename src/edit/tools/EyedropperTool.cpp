@@ -61,7 +61,7 @@ std::optional<EyedropperTool::Pick> EyedropperTool::PickAt(
   const Pose& pose = Context().frames.Current();
   const std::vector<Layer>& layers = document.Layers().All();
   for (auto it = layers.rbegin(); it != layers.rend(); ++it) {
-    if (!it->visible) {
+    if (!document.Layers().IsShown(it->id)) {
       continue;
     }
     if (it->type == LayerType::kImage) {

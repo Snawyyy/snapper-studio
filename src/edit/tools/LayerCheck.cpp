@@ -16,12 +16,12 @@ bool CanChangeActiveLayer(const ToolContext& context, const QString& action) {
     context.hint(QStringLiteral("Pick a vector layer to %1").arg(action));
     return false;
   }
-  if (!layer->visible) {
+  if (!context.document.Layers().IsShown(layer->id)) {
     context.hint(QStringLiteral("%1 is hidden: show it to %2 it")
                      .arg(layer->name, action));
     return false;
   }
-  if (layer->locked) {
+  if (context.document.Layers().IsLocked(layer->id)) {
     context.hint(QStringLiteral("%1 is locked: unlock it to %2 it")
                      .arg(layer->name, action));
     return false;

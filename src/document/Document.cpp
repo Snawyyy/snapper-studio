@@ -49,7 +49,13 @@ int Document::Replace(const DocumentContents& contents) {
     }
   }
   for (const Layer& layer : contents.layers) {
-    if (!layers_.Insert(layer, layers_.Count())) {
+    if (layers_.Insert(layer, layers_.Count())) {
+      continue;
+    }
+    // One that can't sit in its parent goes to the top level instead.
+    Layer top_level = layer;
+    top_level.parent = kNoId;
+    if (!layers_.Insert(top_level, layers_.Count())) {
       ++skipped;
     }
   }

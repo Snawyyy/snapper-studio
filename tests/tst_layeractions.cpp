@@ -43,6 +43,42 @@ class LayerActionsTest : public QObject {
              QStringLiteral("Layer 3"));
   }
 
+  void NewBoneLayerWrapsTheActiveLayer() {
+    Fixture f;
+    const Id drawing = f.LayerAt(0);
+    f.actions.AddBoneLayer();
+    const Id bones = f.selection.ActiveLayer();
+    QCOMPARE(f.document.Layers().Find(bones)->type, snapper::LayerType::kBone);
+    QCOMPARE(f.document.Layers().Find(drawing)->parent, bones);
+    QCOMPARE(f.document.Layers().IndexOf(bones), 0);
+    f.undo.Undo();
+    QCOMPARE(f.document.Layers().Count(), 1);
+    QCOMPARE(f.document.Layers().Find(drawing)->parent, snapper::kNoId);
+  }
+
+  void DeletingABoneLayerTakesWhatItHoldsAndUndoBringsItBack() {
+    Fixture f;
+    f.actions.AddLayer();
+    const Id top = f.LayerAt(1);
+    f.selection.SetActiveLayer(f.LayerAt(0));
+    f.actions.AddBoneLayer();
+    const Id bones = f.selection.ActiveLayer();
+    QString why_not;
+    QVERIFY(f.actions.DeleteLayer(bones, &why_not));
+    QCOMPARE(f.document.Layers().Count(), 1);
+    QCOMPARE(f.LayerAt(0), top);
+    f.undo.Undo();
+    QCOMPARE(f.document.Layers().Count(), 3);
+    QCOMPARE(f.document.Layers().EndOf(bones), 2);
+  }
+
+  void ABoneLayerHoldingEveryLayerStays() {
+    Fixture f;
+    f.actions.AddBoneLayer();
+    QString why_not;
+    QVERIFY(!f.actions.DeleteLayer(f.selection.ActiveLayer(), &why_not));
+  }
+
   void TheLastLayerStays() {
     Fixture f;
     QString why_not;

@@ -8,6 +8,7 @@
 #include "app/CommandRegistry.h"
 #include "document/Document.h"
 #include "edit/LayerCommands.h"
+#include "edit/MacroCommand.h"
 #include "edit/SelectionManager.h"
 #include "edit/UndoManager.h"
 
@@ -22,21 +23,50 @@ LayerActions::LayerActions(Document& document, SelectionManager& selection,
       hint_(std::move(hint)) {}
 
 void LayerActions::AddLayer() {
-  const Layer layer{.id = document_.NewId(), .name = UnusedName()};
+  const LayerManager& layers = document_.Layers();
+  const Layer* active = layers.Find(selection_.ActiveLayer());
+  const Layer layer{.id = document_.NewId(),
+                    .parent = active == nullptr ? kNoId : active->parent,
+                    .name = UnusedName(QStringLiteral("Layer"))};
   const int above_active =
-      document_.Layers().IndexOf(selection_.ActiveLayer()) + 1;
+      active == nullptr ? layers.Count() : layers.EndOf(active->id);
   undo_.Push(std::make_unique<AddLayerCommand>(document_, layer, above_active));
   selection_.SetActiveLayer(layer.id);
 }
 
+void LayerActions::AddBoneLayer() {
+  const LayerManager& layers = document_.Layers();
+  const Layer* active = layers.Find(selection_.ActiveLayer());
+  if (active == nullptr) {
+    hint_(QStringLiteral("Pick a layer to put in the bone layer"));
+    return;
+  }
+  const Id wrapped = active->id;
+  const Layer bones{.id = document_.NewId(),
+                    .parent = active->parent,
+                    .type = LayerType::kBone,
+                    .name = UnusedName(QStringLiteral("Bones"))};
+  const int at = layers.IndexOf(wrapped);
+  auto macro = std::make_unique<MacroCommand>(QStringLiteral("New Bone Layer"));
+  macro->Add(std::make_unique<AddLayerCommand>(document_, bones, at));
+  // Once the bone layer is in, the wrapped layer sits just above it.
+  macro->Add(
+      std::make_unique<MoveLayerCommand>(document_, wrapped, bones.id, at + 1));
+  undo_.Push(std::move(macro));
+  selection_.SetActiveLayer(bones.id);
+  hint_(QStringLiteral("Add Bone (A): drag out the first bone"));
+}
+
 bool LayerActions::DeleteLayer(Id layer, QString* why_not) {
-  const bool is_last = document_.Layers().Count() <= 1;
-  if (is_last) {
-    *why_not = QStringLiteral("A project keeps at least one layer");
+  const LayerManager& layers = document_.Layers();
+  if (layers.Find(layer) == nullptr) {
+    *why_not = QStringLiteral("Pick a layer first");
     return false;
   }
-  if (document_.Layers().Find(layer) == nullptr) {
-    *why_not = QStringLiteral("Pick a layer first");
+  const int going = layers.EndOf(layer) - layers.IndexOf(layer);
+  const bool is_last = layers.Count() - going < 1;
+  if (is_last) {
+    *why_not = QStringLiteral("A project keeps at least one layer");
     return false;
   }
   undo_.Push(std::make_unique<RemoveLayerCommand>(document_, layer));
@@ -72,13 +102,39 @@ void LayerActions::SetLocked(Id layer, bool locked) {
 }
 
 void LayerActions::MoveLayer(Id layer, int steps) {
-  const int from = document_.Layers().IndexOf(layer);
-  const int to = from + steps;
-  const bool is_possible =
-      from >= 0 && to >= 0 && to < document_.Layers().Count();
-  if (is_possible) {
-    undo_.Push(std::make_unique<MoveLayerCommand>(document_, layer, to));
+  const LayerManager& layers = document_.Layers();
+  const std::optional<int> to = layers.StepIndex(layer, steps);
+  if (to.has_value()) {
+    undo_.Push(std::make_unique<MoveLayerCommand>(
+        document_, layer, layers.Find(layer)->parent, *to));
   }
+}
+
+bool LayerActions::PlaceLayer(Id layer, Id parent, int index,
+                              QString* why_not) {
+  const LayerManager& layers = document_.Layers();
+  const Layer* found = layers.Find(layer);
+  if (found == nullptr) {
+    *why_not = QStringLiteral("Pick a layer first");
+    return false;
+  }
+  const bool is_into_itself = parent == layer || layers.IsInside(parent, layer);
+  if (is_into_itself) {
+    *why_not = QStringLiteral("A layer can't go inside itself");
+    return false;
+  }
+  // Try it on a copy, so a refused move leaves no undo step.
+  LayerManager trial;
+  for (const Layer& each : layers.All()) {
+    trial.Insert(each, trial.Count());
+  }
+  if (!trial.Place(layer, parent, index)) {
+    *why_not = QStringLiteral("%1 can't go there").arg(found->name);
+    return false;
+  }
+  undo_.Push(
+      std::make_unique<MoveLayerCommand>(document_, layer, parent, index));
+  return true;
 }
 
 bool LayerActions::ImportPicture(const QString& path, QString* why_not) {
@@ -127,6 +183,12 @@ void LayerActions::RegisterCommands(CommandRegistry& commands) {
       .run = [this] { AddLayer(); },
   });
   commands.Add({
+      .id = QStringLiteral("layer.add-bones"),
+      .title = QStringLiteral("New Bone Layer"),
+      .shortcut = {},
+      .run = [this] { AddBoneLayer(); },
+  });
+  commands.Add({
       .id = QStringLiteral("layer.delete"),
       .title = QStringLiteral("Delete Layer"),
       .shortcut = {},
@@ -165,19 +227,19 @@ void LayerActions::RegisterCommands(CommandRegistry& commands) {
   });
 }
 
-QString LayerActions::UnusedName() const {
+QString LayerActions::UnusedName(const QString& base) const {
   // Of count + 1 numbers in a row, at least one is free.
   const std::vector<Layer>& layers = document_.Layers().All();
   const int count = static_cast<int>(layers.size());
   for (int n = count + 1; n <= 2 * count + 1; ++n) {
-    const QString name = QStringLiteral("Layer %1").arg(n);
+    const QString name = QStringLiteral("%1 %2").arg(base).arg(n);
     const bool is_taken = std::ranges::any_of(
         layers, [&](const Layer& layer) { return layer.name == name; });
     if (!is_taken) {
       return name;
     }
   }
-  return QStringLiteral("Layer");
+  return base;
 }
 
 }  // namespace snapper

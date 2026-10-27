@@ -25,7 +25,8 @@ class AddLayerCommand : public QUndoCommand {
   int index_;
 };
 
-// Removes a layer along with everything drawn on it.
+// Removes a layer along with the layers inside it and everything drawn on
+// them.
 class RemoveLayerCommand : public QUndoCommand {
  public:
   RemoveLayerCommand(Document& document, Id layer);
@@ -35,7 +36,8 @@ class RemoveLayerCommand : public QUndoCommand {
 
  private:
   Document& document_;
-  RemovedLayer layer_;
+  Id layer_;
+  std::vector<RemovedLayer> layers_;
   std::vector<RemovedShape> shapes_;
 };
 
@@ -79,10 +81,11 @@ class SetLayerLockedCommand : public QUndoCommand {
   bool locked_;
 };
 
-// Moves a layer up or down the stack.
+// Moves a layer, with the layers inside it, up or down the stack or into
+// another layer. The index is as for LayerManager::Place.
 class MoveLayerCommand : public QUndoCommand {
  public:
-  MoveLayerCommand(Document& document, Id layer, int to_index);
+  MoveLayerCommand(Document& document, Id layer, Id to_parent, int to_index);
 
   void redo() override;
   void undo() override;
@@ -90,7 +93,9 @@ class MoveLayerCommand : public QUndoCommand {
  private:
   Document& document_;
   Id layer_;
+  Id from_parent_ = kNoId;
   int from_index_;
+  Id to_parent_;
   int to_index_;
 };
 

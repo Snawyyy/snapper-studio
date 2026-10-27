@@ -22,15 +22,23 @@ class LayerActions {
   LayerActions(Document& document, SelectionManager& selection,
                UndoManager& undo, std::function<void(const QString&)> hint);
 
-  // Adds a vector layer above the active one and makes it active.
+  // Adds a vector layer above the active one, beside it in the same
+  // parent, and makes it active.
   void AddLayer();
-  // Fails, with a reason, on the last layer: a project keeps one.
+  // Adds a bone layer where the active layer is and puts the active layer
+  // inside it. The bone layer becomes active.
+  void AddBoneLayer();
+  // Fails, with a reason, when it would leave no layer: a project keeps
+  // one. A bone layer goes with the layers inside it.
   bool DeleteLayer(Id layer, QString* why_not);
   void RenameLayer(Id layer, const QString& name);
   void SetVisible(Id layer, bool visible);
   void SetLocked(Id layer, bool locked);
-  // +1 moves up one, -1 down one.
+  // +1 moves up one, -1 down one, past the layers beside it.
   void MoveLayer(Id layer, int steps);
+  // Moves a layer into `parent` (kNoId for top level) at an index as for
+  // LayerManager::Place. Fails, with a reason, where it can't go.
+  bool PlaceLayer(Id layer, Id parent, int index, QString* why_not);
   // Adds a picture from a file as an image layer at the bottom, centered
   // and shrunk to fit the canvas, ready to trace over. The active layer
   // stays active.
@@ -41,7 +49,8 @@ class LayerActions {
   void RegisterCommands(CommandRegistry& commands);
 
  private:
-  QString UnusedName() const;
+  // "<base> <n>" no layer has yet.
+  QString UnusedName(const QString& base) const;
 
   Document& document_;
   SelectionManager& selection_;

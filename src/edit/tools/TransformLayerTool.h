@@ -36,6 +36,8 @@ class TransformLayerTool : public Tool {
   std::optional<QRectF> ContentBox() const;
   // True when the layer has never been moved, turned or scaled.
   bool IsUntouched(const Layer& layer) const;
+  // A canvas spot in the space the active layer's transform sits in.
+  QPointF InOuterSpace(const QPointF& canvas) const;
   void Turn(const ToolInput& input);
   void Scale(const ToolInput& input);
   void Place(const LayerTransform& transform);

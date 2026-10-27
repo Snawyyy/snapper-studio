@@ -1,5 +1,7 @@
 #include "edit/LayerCommands.h"
 
+#include <algorithm>
+
 #include "document/Document.h"
 #include "edit/ShapeCommands.h"
 
@@ -16,26 +18,34 @@ void AddLayerCommand::redo() { document_.Layers().Insert(layer_, index_); }
 void AddLayerCommand::undo() { document_.Layers().Take(layer_.id); }
 
 RemoveLayerCommand::RemoveLayerCommand(Document& document, Id layer)
-    : QUndoCommand(QStringLiteral("Delete Layer")), document_(document) {
+    : QUndoCommand(QStringLiteral("Delete Layer")),
+      document_(document),
+      layer_(layer) {
   const LayerManager& layers = document.Layers();
-  const Layer* found = layers.Find(layer);
-  if (found != nullptr) {
-    layer_ = {.layer = *found, .index = layers.IndexOf(layer)};
-  }
+  const int from = layers.IndexOf(layer);
+  const int end = layers.EndOf(layer);
   const ShapeManager& shapes = document.Shapes();
-  for (const Id shape : shapes.ShapesOn(layer)) {
-    shapes_.push_back(
-        {.shape = *shapes.Find(shape), .index = shapes.IndexOf(shape)});
+  for (int i = std::max(from, 0); i < end; ++i) {
+    const Layer& inside = layers.All()[static_cast<size_t>(i)];
+    layers_.push_back({.layer = inside, .index = i});
+    for (const Id shape : shapes.ShapesOn(inside.id)) {
+      shapes_.push_back(
+          {.shape = *shapes.Find(shape), .index = shapes.IndexOf(shape)});
+    }
   }
+  // Shapes go back in list order, whatever layer they are on.
+  std::ranges::sort(shapes_, {}, &RemovedShape::index);
 }
 
 void RemoveLayerCommand::redo() {
   SwapShapes(document_.Shapes(), shapes_, {});
-  document_.Layers().Take(layer_.layer.id);
+  document_.Layers().TakeTree(layer_);
 }
 
 void RemoveLayerCommand::undo() {
-  document_.Layers().Insert(layer_.layer, layer_.index);
+  for (const RemovedLayer& removed : layers_) {
+    document_.Layers().Insert(removed.layer, removed.index);
+  }
   SwapShapes(document_.Shapes(), {}, shapes_);
 }
 
@@ -91,14 +101,26 @@ void SetLayerLockedCommand::undo() {
   document_.Layers().SetLocked(layer_, !locked_);
 }
 
-MoveLayerCommand::MoveLayerCommand(Document& document, Id layer, int to_index)
+MoveLayerCommand::MoveLayerCommand(Document& document, Id layer, Id to_parent,
+                                   int to_index)
     : QUndoCommand(QStringLiteral("Move Layer")),
       document_(document),
       layer_(layer),
       from_index_(document.Layers().IndexOf(layer)),
-      to_index_(to_index) {}
+      to_parent_(to_parent),
+      to_index_(to_index) {
+  const Layer* found = document.Layers().Find(layer);
+  if (found != nullptr) {
+    from_parent_ = found->parent;
+  }
+}
 
-void MoveLayerCommand::redo() { document_.Layers().Move(layer_, to_index_); }
-void MoveLayerCommand::undo() { document_.Layers().Move(layer_, from_index_); }
+void MoveLayerCommand::redo() {
+  document_.Layers().Place(layer_, to_parent_, to_index_);
+}
+
+void MoveLayerCommand::undo() {
+  document_.Layers().Place(layer_, from_parent_, from_index_);
+}
 
 }  // namespace snapper

@@ -69,7 +69,8 @@ void OverlayRenderer::DrawStyleUsers(QPainter& painter,
     const Shape* shape = pose.FindShape(id);
     const Layer* layer =
         shape == nullptr ? nullptr : document.Layers().Find(shape->layer);
-    const bool is_shown = layer != nullptr && layer->visible;
+    const bool is_shown =
+        layer != nullptr && document.Layers().IsShown(layer->id);
     if (!is_shown) {
       continue;
     }

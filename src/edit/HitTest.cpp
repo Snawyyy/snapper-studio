@@ -97,7 +97,7 @@ Id HitTest::LayerAt(const Document& document, const Pose& pose,
                     const ViewTransform& view, const QPointF& screen) {
   const std::vector<Layer>& layers = document.Layers().All();
   for (auto it = layers.rbegin(); it != layers.rend(); ++it) {
-    if (!it->visible) {
+    if (!document.Layers().IsShown(it->id)) {
       continue;
     }
     if (ShapeAt(document, pose, it->id, view, screen) != kNoId) {

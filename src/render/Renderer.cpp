@@ -33,7 +33,7 @@ void Renderer::DrawLayers(QPainter& painter, const Document& document,
 
   for (size_t i = 0; i < layers.size(); ++i) {
     const Layer& layer = layers[i];
-    if (!layer.visible) {
+    if (!document.Layers().IsShown(layer.id)) {
       continue;
     }
     painter.save();

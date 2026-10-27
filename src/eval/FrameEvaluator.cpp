@@ -60,7 +60,11 @@ Pose FrameEvaluator::Evaluate(const Document& document, int frame) {
   for (const Layer& layer : document.Layers().All()) {
     const LayerTransform transform = TransformAt(document, layer, frame);
     pose.layer_transforms.insert(layer.id, transform);
-    pose.layer_matrices.insert(layer.id, transform.Matrix(layer.origin));
+    // Parents come first, so theirs is already there.
+    const QTransform outer = pose.LayerMatrix(layer.parent);
+    pose.outer_matrices.insert(layer.id, outer);
+    pose.layer_matrices.insert(layer.id,
+                               transform.Matrix(layer.origin) * outer);
   }
 
   pose.shapes = document.Shapes().All();

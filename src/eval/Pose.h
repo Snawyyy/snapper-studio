@@ -22,12 +22,18 @@ struct Pose {
   QHash<Id, LayerTransform> layer_transforms;
   // Layer space to canvas.
   QHash<Id, QTransform> layer_matrices;
+  // The space a layer's own transform sits in to canvas: its parent's
+  // space, after any bone it follows.
+  QHash<Id, QTransform> outer_matrices;
   QHash<Id, int> shape_index;
   // Each point's shape and place in it.
   QHash<Id, std::pair<int, int>> point_index;
 
   QTransform LayerMatrix(Id layer) const {
     return layer_matrices.value(layer, QTransform());
+  }
+  QTransform OuterMatrix(Id layer) const {
+    return outer_matrices.value(layer, QTransform());
   }
   LayerTransform TransformOf(Id layer) const {
     return layer_transforms.value(layer, LayerTransform{});

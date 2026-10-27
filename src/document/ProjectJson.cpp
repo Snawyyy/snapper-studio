@@ -21,8 +21,15 @@ constexpr int kMaxFps = 120;
 constexpr int kMaxFrames = 100000;
 
 QString LayerTypeName(LayerType type) {
-  return type == LayerType::kImage ? QStringLiteral("image")
-                                   : QStringLiteral("vector");
+  switch (type) {
+    case LayerType::kImage:
+      return QStringLiteral("image");
+    case LayerType::kBone:
+      return QStringLiteral("bone");
+    case LayerType::kVector:
+      break;
+  }
+  return QStringLiteral("vector");
 }
 
 QJsonObject WriteCanvas(const CanvasSettings& canvas) {
@@ -220,8 +227,11 @@ std::optional<LoadedProject> ProjectJson::Read(const QByteArray& json,
     layer.name = json_layer.value(QStringLiteral("name")).toString();
     layer.visible = json_layer.value(QStringLiteral("visible")).toBool(true);
     layer.locked = json_layer.value(QStringLiteral("locked")).toBool(false);
-    const bool is_image =
-        json_layer.value(QStringLiteral("type")).toString() == u"image";
+    const QString type = json_layer.value(QStringLiteral("type")).toString();
+    if (type == u"bone") {
+      layer.type = LayerType::kBone;
+    }
+    const bool is_image = type == u"image";
     if (is_image) {
       layer.type = LayerType::kImage;
       layer.image = json_layer.value(QStringLiteral("image")).toString();

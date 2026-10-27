@@ -66,15 +66,27 @@ std::optional<QRectF> TransformLayerTool::ContentBox() const {
     return QRectF(layer->image_pos,
                   image->size().toSizeF() * layer->image_scale);
   }
+  // A bone layer's box holds the art of every layer inside it.
+  const Pose& pose = Context().frames.Current();
+  const QTransform from_canvas = pose.LayerMatrix(layer->id).inverted();
   std::optional<QRectF> box;
-  for (const Shape& shape : Context().frames.Current().shapes) {
-    if (shape.layer != layer->id) {
+  for (const Shape& shape : pose.shapes) {
+    const bool is_in_box = shape.layer == layer->id ||
+                           document.Layers().IsInside(shape.layer, layer->id);
+    if (!is_in_box) {
       continue;
     }
-    const QRectF bounds = ShapeGeometry::CenterLine(shape).boundingRect();
+    const QTransform to_layer = pose.LayerMatrix(shape.layer) * from_canvas;
+    const QRectF bounds =
+        to_layer.mapRect(ShapeGeometry::CenterLine(shape).boundingRect());
     box = box.has_value() ? box->united(bounds) : bounds;
   }
   return box;
+}
+
+QPointF TransformLayerTool::InOuterSpace(const QPointF& canvas) const {
+  const QTransform outer = Context().frames.Current().OuterMatrix(layer_);
+  return outer.isInvertible() ? outer.inverted().map(canvas) : canvas;
 }
 
 bool TransformLayerTool::IsUntouched(const Layer& layer) const {
@@ -94,19 +106,21 @@ void TransformLayerTool::Press(const ToolInput& input) {
     Context().hint(QStringLiteral("Pick a layer to transform"));
     return;
   }
-  const bool is_hidden_or_locked = !layer->visible || layer->locked;
+  const bool is_locked = document.Layers().IsLocked(layer->id);
+  const bool is_hidden_or_locked =
+      !document.Layers().IsShown(layer->id) || is_locked;
   if (is_hidden_or_locked) {
-    Context().hint(QStringLiteral("%1 is %2: %3 it to transform it")
-                       .arg(layer->name,
-                            layer->locked ? QStringLiteral("locked")
-                                          : QStringLiteral("hidden"),
-                            layer->locked ? QStringLiteral("unlock")
-                                          : QStringLiteral("show")));
+    Context().hint(
+        QStringLiteral("%1 is %2: %3 it to transform it")
+            .arg(
+                layer->name,
+                is_locked ? QStringLiteral("locked") : QStringLiteral("hidden"),
+                is_locked ? QStringLiteral("unlock") : QStringLiteral("show")));
     return;
   }
   const Pose& pose = Context().frames.Current();
   layer_ = layer->id;
-  press_canvas_ = input.canvas;
+  press_canvas_ = InOuterSpace(input.canvas);
   start_ = pose.TransformOf(layer_);
   has_moved_ = false;
   drag_tag_ = MovePointsCommand::NewDragTag();
@@ -145,7 +159,9 @@ void TransformLayerTool::Press(const ToolInput& input) {
   }
 }
 
-void TransformLayerTool::Drag(const ToolInput& input) {
+void TransformLayerTool::Drag(const ToolInput& canvas_input) {
+  ToolInput input = canvas_input;
+  input.canvas = InOuterSpace(canvas_input.canvas);
   switch (mode_) {
     case Mode::kMove: {
       QPointF delta = input.canvas - press_canvas_;

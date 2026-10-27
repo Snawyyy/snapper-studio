@@ -4,7 +4,10 @@
 #include <QPainterPath>
 #include <QPainterPathStroker>
 
+#include <cmath>
+
 #include "document/Document.h"
+#include "eval/Pose.h"
 #include "render/ShapeGeometry.h"
 #include "render/ViewTransform.h"
 
@@ -53,19 +56,19 @@ void OverlayRenderer::DrawSurround(QPainter& painter, const Document& document,
 // A ring round each line, never over it, so the change itself stays in
 // plain sight.
 void OverlayRenderer::DrawStyleUsers(QPainter& painter,
-                                     const Document& document,
+                                     const Document& document, const Pose& pose,
                                      const ViewTransform& view, Id style,
                                      const QColor& color) {
   if (style == kNoId) {
     return;
   }
-  const QTransform to_screen = view.ToScreenMatrix();
   painter.save();
   painter.setBrush(Qt::NoBrush);
   painter.setPen(QPen(color, kHighlightWidth));
   for (const Id id : document.Shapes().ShapesWithStyle(style)) {
-    const Shape* shape = document.Shapes().Find(id);
-    const Layer* layer = document.Layers().Find(shape->layer);
+    const Shape* shape = pose.FindShape(id);
+    const Layer* layer =
+        shape == nullptr ? nullptr : document.Layers().Find(shape->layer);
     const bool is_shown = layer != nullptr && layer->visible;
     if (!is_shown) {
       continue;
@@ -73,7 +76,10 @@ void OverlayRenderer::DrawStyleUsers(QPainter& painter,
     const ShapeLook look =
         document.Styles().Resolve(shape->look, shape->styles);
     QPainterPathStroker stroker;
-    stroker.setWidth(look.line_width * view.Zoom() + 2 * kHighlightGap);
+    const QTransform to_screen =
+        pose.LayerMatrix(layer->id) * view.ToScreenMatrix();
+    const double scale = std::sqrt(std::abs(to_screen.determinant()));
+    stroker.setWidth(look.line_width * scale + 2 * kHighlightGap);
     stroker.setJoinStyle(Qt::RoundJoin);
     stroker.setCapStyle(Qt::RoundCap);
     const QPainterPath line = to_screen.map(ShapeGeometry::CenterLine(*shape));

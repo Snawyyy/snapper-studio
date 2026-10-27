@@ -3,10 +3,13 @@
 #include "app/CommandRegistry.h"
 #include "app/Theme.h"
 #include "document/Document.h"
+#include "edit/AnimationEditor.h"
 #include "edit/LookManager.h"
+#include "edit/Playhead.h"
 #include "edit/SelectionManager.h"
 #include "edit/ToolManager.h"
 #include "edit/UndoManager.h"
+#include "eval/FrameEvaluator.h"
 
 using snapper::ToolManager;
 
@@ -37,6 +40,8 @@ struct Fixture {
                                        .undo = undo,
                                        .selection = selection,
                                        .looks = looks,
+                                       .frames = frames,
+                                       .animation = animation,
                                        .theme = theme,
                                        .hint = [](const QString&) {}};
     tools.Add(
@@ -50,6 +55,9 @@ struct Fixture {
   snapper::UndoManager undo;
   snapper::SelectionManager selection{document};
   snapper::LookManager looks{document, selection, undo, [](const QString&) {}};
+  snapper::Playhead playhead{document};
+  snapper::FrameEvaluator frames{document, playhead};
+  snapper::AnimationEditor animation{document, playhead};
   snapper::CommandRegistry commands;
   snapper::Theme theme;
   ToolManager tools;

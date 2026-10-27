@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "document/Document.h"
+#include "eval/Pose.h"
 #include "render/BrushStamper.h"
 #include "render/ShapeGeometry.h"
 
@@ -17,9 +18,9 @@ void Renderer::DrawPage(QPainter& painter, const Document& document) {
 }
 
 void Renderer::DrawLayers(QPainter& painter, const Document& document,
-                          int frame) {
+                          const Pose& pose) {
   const std::vector<Layer>& layers = document.Layers().All();
-  const std::vector<Shape>& shapes = document.Shapes().All();
+  const std::vector<Shape>& shapes = pose.shapes;
 
   // Sort shapes into their layers once, keeping their order.
   std::vector<std::vector<const Shape*>> by_layer(layers.size());
@@ -35,13 +36,15 @@ void Renderer::DrawLayers(QPainter& painter, const Document& document,
     if (!layer.visible) {
       continue;
     }
+    painter.save();
+    painter.setTransform(pose.LayerMatrix(layer.id), true);
     if (layer.type == LayerType::kImage) {
       DrawPicture(painter, document, layer);
-      continue;
     }
     for (const Shape* shape : by_layer[i]) {
-      DrawShape(painter, document, *shape, frame);
+      DrawShape(painter, document, *shape, pose.frame);
     }
+    painter.restore();
   }
 }
 

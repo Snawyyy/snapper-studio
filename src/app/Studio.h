@@ -12,10 +12,14 @@ class CanvasView;
 class ColorPopover;
 class CommandBox;
 class CommandRegistry;
+class AnimationEditor;
 class Document;
+class FrameEvaluator;
+class KeyActions;
 class LayerActions;
 class LookManager;
 class MainWindow;
+class Playhead;
 class ProjectIo;
 class SelectionManager;
 class SettingsManager;
@@ -49,6 +53,7 @@ class Studio {
   void RegisterAppCommands();
   void CreateTools();
   void CreatePanels();
+  void CreateTimeline();
   void CreateStudy();
   void RestoreSession();
   void SaveSession();
@@ -60,6 +65,11 @@ class Studio {
   std::unique_ptr<SettingsManager> settings_;
   std::unique_ptr<CommandRegistry> commands_;
   std::unique_ptr<Document> document_;
+  // Made right after the document, so poses are dropped before anything
+  // else hears of a change.
+  std::unique_ptr<Playhead> playhead_;
+  std::unique_ptr<FrameEvaluator> frames_;
+  std::unique_ptr<AnimationEditor> animation_;
   std::unique_ptr<UndoManager> undo_;
   std::unique_ptr<SelectionManager> selection_;
   std::unique_ptr<LookManager> looks_;
@@ -67,6 +77,7 @@ class Studio {
   std::unique_ptr<LayerActions> layer_actions_;
   std::unique_ptr<StyleActions> style_actions_;
   std::unique_ptr<BrushActions> brush_actions_;
+  std::unique_ptr<KeyActions> key_actions_;
   std::unique_ptr<ProjectIo> project_;
   std::unique_ptr<StudyManager> study_;
   std::unique_ptr<MainWindow> window_;

@@ -7,6 +7,7 @@
 #include "document/Document.h"
 #include "edit/HitTest.h"
 #include "edit/LookManager.h"
+#include "eval/FrameEvaluator.h"
 #include "render/ViewTransform.h"
 
 namespace snapper {
@@ -16,15 +17,16 @@ namespace {
 constexpr double kSampleRadius = 10.0;
 constexpr double kSampleOffset = 22.0;
 
-// The picture's pixel under a canvas point, if the layer shows one there.
+// The picture's pixel under a point in layer space, if the layer shows
+// one there.
 std::optional<QColor> PixelAt(const Document& document, const Layer& layer,
-                              const QPointF& canvas) {
+                              const QPointF& spot) {
   const QImage* image = document.Images().Find(layer.image);
   const bool has_picture = image != nullptr && layer.image_scale > 0;
   if (!has_picture) {
     return std::nullopt;
   }
-  const QPointF at = (canvas - layer.image_pos) / layer.image_scale;
+  const QPointF at = (spot - layer.image_pos) / layer.image_scale;
   const QPoint pixel(static_cast<int>(std::floor(at.x())),
                      static_cast<int>(std::floor(at.y())));
   const bool is_inside = image->rect().contains(pixel);
@@ -56,13 +58,15 @@ std::optional<EyedropperTool::Pick> EyedropperTool::PickAt(
     return std::nullopt;
   }
   const ViewTransform& view = *input.view;
+  const Pose& pose = Context().frames.Current();
   const std::vector<Layer>& layers = document.Layers().All();
   for (auto it = layers.rbegin(); it != layers.rend(); ++it) {
     if (!it->visible) {
       continue;
     }
     if (it->type == LayerType::kImage) {
-      const std::optional<QColor> pixel = PixelAt(document, *it, input.canvas);
+      const std::optional<QColor> pixel = PixelAt(
+          document, *it, pose.LayerMatrix(it->id).inverted().map(input.canvas));
       if (pixel.has_value()) {
         return Pick{.kind = Pick::Kind::kPicture,
                     .color = *pixel,
@@ -70,15 +74,16 @@ std::optional<EyedropperTool::Pick> EyedropperTool::PickAt(
       }
       continue;
     }
-    const Id id = HitTest::ShapeAt(document, it->id, view, input.screen);
-    const Shape* shape = document.Shapes().Find(id);
+    const Id id = HitTest::ShapeAt(document, pose, it->id, view, input.screen);
+    const Shape* shape = pose.FindShape(id);
     if (shape == nullptr) {
       continue;
     }
     const ShapeLook look =
         document.Styles().Resolve(shape->look, shape->styles);
-    const bool is_line = look.has_line && HitTest::IsOnLine(document, *shape,
-                                                            view, input.screen);
+    const bool is_line =
+        look.has_line &&
+        HitTest::IsOnLine(document, pose, *shape, view, input.screen);
     return Pick{.kind = is_line ? Pick::Kind::kLine : Pick::Kind::kFill,
                 .color = is_line ? look.line : look.fill,
                 .shape = ShapeLookState{

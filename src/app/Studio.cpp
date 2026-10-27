@@ -11,9 +11,12 @@
 #include "app/StudyManager.h"
 #include "app/ThemeManager.h"
 #include "document/Document.h"
+#include "edit/AnimationEditor.h"
 #include "edit/BrushActions.h"
+#include "edit/KeyActions.h"
 #include "edit/LayerActions.h"
 #include "edit/LookManager.h"
+#include "edit/Playhead.h"
 #include "edit/SelectionManager.h"
 #include "edit/StyleActions.h"
 #include "edit/ToolManager.h"
@@ -22,6 +25,7 @@
 #include "edit/tools/PenTool.h"
 #include "edit/tools/SelectTool.h"
 #include "edit/tools/ShapeTool.h"
+#include "eval/FrameEvaluator.h"
 #include "ui/BrushesPanel.h"
 #include "ui/CanvasView.h"
 #include "ui/ColorPopover.h"
@@ -74,6 +78,9 @@ Studio::Studio()
       settings_(std::make_unique<SettingsManager>()),
       commands_(std::make_unique<CommandRegistry>()),
       document_(std::make_unique<Document>()),
+      playhead_(std::make_unique<Playhead>(*document_)),
+      frames_(std::make_unique<FrameEvaluator>(*document_, *playhead_)),
+      animation_(std::make_unique<AnimationEditor>(*document_, *playhead_)),
       undo_(std::make_unique<UndoManager>()),
       selection_(std::make_unique<SelectionManager>(*document_)),
       looks_(std::make_unique<LookManager>(
@@ -85,13 +92,15 @@ Studio::Studio()
   QObject::connect(
       looks_.get(), &LookManager::NewShapesChanged, looks_.get(),
       [this] { settings_->SetNewShapeLook(looks_->NewShapes().look); });
-  canvas_ = new CanvasView(*document_, *selection_, theme_->CurrentTheme());
+  canvas_ = new CanvasView(*document_, *selection_, *frames_, *playhead_,
+                           theme_->CurrentTheme());
   window_ = std::make_unique<MainWindow>(canvas_);
   layer_actions_ = std::make_unique<LayerActions>(
       *document_, *selection_, *undo_,
       [this](const QString& text) { window_->ShowHint(text); });
   CreateTools();
   CreatePanels();
+  CreateTimeline();
   command_box_ = new CommandBox(commands_.get(), window_->Widget());
   RegisterAppCommands();
   undo_->RegisterCommands(*commands_);
@@ -155,6 +164,8 @@ void Studio::CreateTools() {
       .undo = *undo_,
       .selection = *selection_,
       .looks = *looks_,
+      .frames = *frames_,
+      .animation = *animation_,
       .theme = theme_->CurrentTheme(),
       .hint = [this](const QString& text) { window_->ShowHint(text); },
   };
@@ -241,6 +252,19 @@ void Studio::CreatePanels() {
   history->setObjectName(QStringLiteral("history"));
   history->setEmptyLabel(QStringLiteral("New project"));
   window_->SetPanelContent(MainWindow::kHistory, history);
+}
+
+void Studio::CreateTimeline() {
+  key_actions_ = std::make_unique<KeyActions>(
+      *document_, *selection_, *undo_, *playhead_, *frames_,
+      [this](const QString& text) { window_->ShowHint(text); });
+  key_actions_->RegisterCommands(*commands_);
+  playhead_->RegisterCommands(
+      *commands_,
+      [this](int key, Qt::KeyboardModifiers modifiers) {
+        return canvas_->hasFocus() && tools_->KeyPressed(key, modifiers);
+      },
+      [this] { return key_actions_->FramesIn(KeyRow::kAll); });
 }
 
 void Studio::CreateStudy() {

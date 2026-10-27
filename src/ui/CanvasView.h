@@ -6,6 +6,7 @@
 #include "app/Theme.h"
 #include "document/Ids.h"
 #include "render/ArtCache.h"
+#include "render/OnionSkin.h"
 #include "render/ViewTransform.h"
 #include "ui/ViewNavigator.h"
 
@@ -13,6 +14,8 @@ namespace snapper {
 
 class CommandRegistry;
 class Document;
+class FrameEvaluator;
+class Playhead;
 class SelectionManager;
 class ToolManager;
 struct ToolInput;
@@ -25,9 +28,11 @@ class CanvasView : public QWidget {
 
  public:
   CanvasView(Document& document, SelectionManager& selection,
+             FrameEvaluator& frames, const Playhead& playhead,
              const Theme& theme, QWidget* parent = nullptr);
 
-  // Fit Canvas, Fit Selection, Actual Size, Zoom In and Zoom Out.
+  // Fit Canvas, Fit Selection, Actual Size, Zoom In, Zoom Out and Onion
+  // Skin.
   void RegisterCommands(CommandRegistry& commands);
 
   void FitCanvas();
@@ -38,6 +43,11 @@ class CanvasView : public QWidget {
   void SetTools(ToolManager* tools);
   // Outlines the shapes using the style, kNoId for none.
   void HighlightStyle(Id style);
+  const OnionSettings& Onion() const { return onion_; }
+  void SetOnion(const OnionSettings& onion);
+
+ Q_SIGNALS:
+  void OnionChanged();
 
  protected:
   void paintEvent(QPaintEvent* event) override;
@@ -68,6 +78,8 @@ class CanvasView : public QWidget {
 
   Document& document_;
   SelectionManager& selection_;
+  FrameEvaluator& frames_;
+  const Playhead& playhead_;
   const Theme& theme_;
   ViewTransform view_;
   ViewNavigator navigator_{view_};
@@ -78,6 +90,7 @@ class CanvasView : public QWidget {
   bool is_tool_pressed_ = false;
   ArtCache art_;
   Id highlighted_style_ = kNoId;
+  OnionSettings onion_;
   // Runs while the view moves, and draws the art sharp again when it stops.
   QTimer view_settle_;
 };

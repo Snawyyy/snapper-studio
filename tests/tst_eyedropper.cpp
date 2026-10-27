@@ -5,10 +5,13 @@
 #include "TestStyles.h"
 #include "app/Theme.h"
 #include "document/Document.h"
+#include "edit/AnimationEditor.h"
 #include "edit/LookManager.h"
+#include "edit/Playhead.h"
 #include "edit/SelectionManager.h"
 #include "edit/UndoManager.h"
 #include "edit/tools/EyedropperTool.h"
+#include "eval/FrameEvaluator.h"
 #include "render/ViewTransform.h"
 
 using snapper::EyedropperTool;
@@ -50,12 +53,17 @@ struct Fixture {
   snapper::SelectionManager selection{document};
   QString hint;
   snapper::LookManager looks{document, selection, undo, [](const QString&) {}};
+  snapper::Playhead playhead{document};
+  snapper::FrameEvaluator frames{document, playhead};
+  snapper::AnimationEditor animation{document, playhead};
   snapper::Theme theme;
   snapper::ViewTransform view;
   EyedropperTool tool{{.document = document,
                        .undo = undo,
                        .selection = selection,
                        .looks = looks,
+                       .frames = frames,
+                       .animation = animation,
                        .theme = theme,
                        .hint = [this](const QString& text) { hint = text; }}};
   Id square_id = snapper::kNoId;

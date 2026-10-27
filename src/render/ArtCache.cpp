@@ -7,6 +7,7 @@
 namespace snapper {
 
 bool ArtCache::Draw(QPainter& painter, const Document& document,
+                    const Pose& pose, const std::vector<OnionFrame>& onion,
                     const QTransform& matrix, const QSize& size,
                     qreal pixel_ratio, bool may_reuse) {
   const QSize pixels = (size.toSizeF() * pixel_ratio).toSize();
@@ -25,14 +26,16 @@ bool ArtCache::Draw(QPainter& painter, const Document& document,
     return true;
   }
   if (!is_current) {
-    Render(document, matrix, size, pixel_ratio);
+    Render(document, pose, onion, matrix, size, pixel_ratio);
   }
   painter.drawImage(QPointF(0, 0), image_);
   return false;
 }
 
-void ArtCache::Render(const Document& document, const QTransform& matrix,
-                      const QSize& size, qreal pixel_ratio) {
+void ArtCache::Render(const Document& document, const Pose& pose,
+                      const std::vector<OnionFrame>& onion,
+                      const QTransform& matrix, const QSize& size,
+                      qreal pixel_ratio) {
   QElapsedTimer timer;
   timer.start();
   const QSize pixels = (size.toSizeF() * pixel_ratio).toSize();
@@ -46,7 +49,8 @@ void ArtCache::Render(const Document& document, const QTransform& matrix,
     painter.setRenderHint(QPainter::Antialiasing);
     painter.setTransform(matrix);
     Renderer::DrawPage(painter, document);
-    Renderer::DrawLayers(painter, document);
+    OnionSkin::Draw(painter, document, onion, matrix, pixels, pixel_ratio);
+    Renderer::DrawLayers(painter, document, pose);
   }
   matrix_ = matrix;
   has_art_ = true;

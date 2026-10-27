@@ -99,6 +99,7 @@ void PenTool::Release(const ToolInput& input) {
         .width = WidthFor(point.pressure),
     });
   }
+  MoveIntoLayer(Context(), shape);
   const QString text =
       is_closed ? QStringLiteral("Draw Shape") : QStringLiteral("Draw Line");
   Context().undo.Push(MakeAddShape(document, shape, text));

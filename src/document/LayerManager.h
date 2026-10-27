@@ -3,6 +3,7 @@
 #include <QObject>
 #include <QPointF>
 #include <QString>
+#include <QTransform>
 
 #include <cstdint>
 #include <optional>
@@ -13,6 +14,18 @@
 namespace snapper {
 
 enum class LayerType : std::uint8_t { kVector, kImage };
+
+// Where a layer sits, turns and scales. On frame 0 it is the layer's own;
+// other frames take it from the layer's channels.
+struct LayerTransform {
+  QPointF position{};
+  double angle = 0.0;  // radians
+  QPointF scale{1.0, 1.0};
+
+  bool operator==(const LayerTransform&) const = default;
+  // Layer space to canvas, turning and scaling round `origin`.
+  QTransform Matrix(const QPointF& origin) const;
+};
 
 struct Layer {
   Id id = kNoId;
@@ -26,6 +39,9 @@ struct Layer {
   QString image{};
   QPointF image_pos{};
   double image_scale = 1.0;
+  // The spot it turns and scales round, in layer space. It never animates.
+  QPointF origin{};
+  LayerTransform transform{};
 };
 
 // A layer taken out of the tree, with where it was, so it can go back.
@@ -55,6 +71,8 @@ class LayerManager : public QObject {
   bool SetName(Id id, const QString& name);
   bool SetVisible(Id id, bool visible);
   bool SetLocked(Id id, bool locked);
+  bool SetTransform(Id id, const LayerTransform& transform,
+                    const QPointF& origin);
 
   const Layer* Find(Id id) const;
   // -1 when no layer has this id.
@@ -65,7 +83,7 @@ class LayerManager : public QObject {
  Q_SIGNALS:
   // A layer was added, removed or moved.
   void ListChanged();
-  // A layer's name, visibility or lock changed.
+  // A layer's name, visibility, lock or transform changed.
   void LayerChanged(Id id);
 
  private:

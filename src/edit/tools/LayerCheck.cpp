@@ -3,6 +3,7 @@
 #include "document/Document.h"
 #include "edit/SelectionManager.h"
 #include "edit/Tool.h"
+#include "eval/FrameEvaluator.h"
 
 namespace snapper {
 
@@ -26,6 +27,18 @@ bool CanChangeActiveLayer(const ToolContext& context, const QString& action) {
     return false;
   }
   return true;
+}
+
+void MoveIntoLayer(const ToolContext& context, Shape& shape) {
+  const QTransform matrix = context.frames.Current().LayerMatrix(shape.layer);
+  const bool is_moved = !matrix.isIdentity() && matrix.isInvertible();
+  if (!is_moved) {
+    return;
+  }
+  const QTransform to_layer = matrix.inverted();
+  for (Point& point : shape.points) {
+    point.pos = to_layer.map(point.pos);
+  }
 }
 
 }  // namespace snapper

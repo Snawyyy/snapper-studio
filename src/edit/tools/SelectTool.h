@@ -2,6 +2,7 @@
 
 #include <QPolygonF>
 #include <QSet>
+#include <QTransform>
 
 #include <cstdint>
 #include <vector>
@@ -54,7 +55,10 @@ class SelectTool : public Tool {
   Qt::KeyboardModifiers press_modifiers_;
   QSet<Id> press_target_;
   QPolygonF area_;
+  // Where the moved points started, in layer space.
   std::vector<PointPosition> move_from_;
+  // Canvas to the active layer's space, when the move started.
+  QTransform to_layer_;
   int move_tag_ = 0;
 };
 

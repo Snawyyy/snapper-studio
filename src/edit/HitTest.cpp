@@ -3,7 +3,10 @@
 #include <QLineF>
 #include <QPainterPathStroker>
 
+#include <cmath>
+
 #include "document/Document.h"
+#include "eval/Pose.h"
 #include "render/ShapeGeometry.h"
 #include "render/ViewTransform.h"
 
@@ -11,38 +14,58 @@ namespace snapper {
 
 namespace {
 
+// Where the pointer is in the layer's own space, and how many of its units
+// make one screen pixel.
+struct LayerSpot {
+  QPointF pos;
+  double units_per_screen = 1.0;
+};
+
+LayerSpot SpotOn(const Pose& pose, Id layer, const ViewTransform& view,
+                 const QPointF& screen) {
+  const QTransform matrix = pose.LayerMatrix(layer);
+  const double scale = std::sqrt(std::abs(matrix.determinant()));
+  const bool is_flat = !matrix.isInvertible() || scale <= 0;
+  if (is_flat) {
+    return {.pos = view.ToCanvas(screen),
+            .units_per_screen = 1.0 / view.Zoom()};
+  }
+  return {.pos = matrix.inverted().map(view.ToCanvas(screen)),
+          .units_per_screen = 1.0 / (view.Zoom() * scale)};
+}
+
 bool IsOnLineAt(const Document& document, const Shape& shape,
-                const QPointF& canvas, double canvas_per_screen) {
+                const LayerSpot& spot) {
   const ShapeLook look = document.Styles().Resolve(shape.look, shape.styles);
   QPainterPathStroker stroker;
   stroker.setWidth(look.line_width +
-                   2 * HitTest::kLineSlackPx * canvas_per_screen);
+                   2 * HitTest::kLineSlackPx * spot.units_per_screen);
   return stroker.createStroke(ShapeGeometry::CenterLine(shape))
-      .contains(canvas);
+      .contains(spot.pos);
 }
 
 bool IsShapeUnder(const Document& document, const Shape& shape,
-                  const QPointF& canvas, double canvas_per_screen) {
+                  const LayerSpot& spot) {
   const ShapeLook look = document.Styles().Resolve(shape.look, shape.styles);
   const bool is_in_fill = shape.closed && look.has_fill &&
-                          ShapeGeometry::CenterLine(shape).contains(canvas);
-  return is_in_fill || IsOnLineAt(document, shape, canvas, canvas_per_screen);
+                          ShapeGeometry::CenterLine(shape).contains(spot.pos);
+  return is_in_fill || IsOnLineAt(document, shape, spot);
 }
 
 }  // namespace
 
-Id HitTest::PointAt(const Document& document, Id layer,
-                    const ViewTransform& view, const QPointF& screen) {
-  const std::vector<Shape>& shapes = document.Shapes().All();
+Id HitTest::PointAt(const Pose& pose, Id layer, const ViewTransform& view,
+                    const QPointF& screen) {
+  const QTransform to_screen = pose.LayerMatrix(layer) * view.ToScreenMatrix();
   Id best = kNoId;
   double best_distance = kPointRadiusPx;
   // Top to bottom, and only a closer point beats one found higher up.
-  for (auto it = shapes.rbegin(); it != shapes.rend(); ++it) {
+  for (auto it = pose.shapes.rbegin(); it != pose.shapes.rend(); ++it) {
     if (it->layer != layer) {
       continue;
     }
     for (const Point& point : it->points) {
-      const double distance = QLineF(view.ToScreen(point.pos), screen).length();
+      const double distance = QLineF(to_screen.map(point.pos), screen).length();
       if (distance < best_distance) {
         best_distance = distance;
         best = point.id;
@@ -52,14 +75,11 @@ Id HitTest::PointAt(const Document& document, Id layer,
   return best;
 }
 
-Id HitTest::ShapeAt(const Document& document, Id layer,
+Id HitTest::ShapeAt(const Document& document, const Pose& pose, Id layer,
                     const ViewTransform& view, const QPointF& screen) {
-  const QPointF canvas = view.ToCanvas(screen);
-  const double canvas_per_screen = 1.0 / view.Zoom();
-  const std::vector<Shape>& shapes = document.Shapes().All();
-  for (auto it = shapes.rbegin(); it != shapes.rend(); ++it) {
-    const bool is_hit = it->layer == layer &&
-                        IsShapeUnder(document, *it, canvas, canvas_per_screen);
+  const LayerSpot spot = SpotOn(pose, layer, view, screen);
+  for (auto it = pose.shapes.rbegin(); it != pose.shapes.rend(); ++it) {
+    const bool is_hit = it->layer == layer && IsShapeUnder(document, *it, spot);
     if (is_hit) {
       return it->id;
     }
@@ -67,36 +87,38 @@ Id HitTest::ShapeAt(const Document& document, Id layer,
   return kNoId;
 }
 
-bool HitTest::IsOnLine(const Document& document, const Shape& shape,
-                       const ViewTransform& view, const QPointF& screen) {
-  return IsOnLineAt(document, shape, view.ToCanvas(screen), 1.0 / view.Zoom());
+bool HitTest::IsOnLine(const Document& document, const Pose& pose,
+                       const Shape& shape, const ViewTransform& view,
+                       const QPointF& screen) {
+  return IsOnLineAt(document, shape, SpotOn(pose, shape.layer, view, screen));
 }
 
-Id HitTest::LayerAt(const Document& document, const ViewTransform& view,
-                    const QPointF& screen) {
+Id HitTest::LayerAt(const Document& document, const Pose& pose,
+                    const ViewTransform& view, const QPointF& screen) {
   const std::vector<Layer>& layers = document.Layers().All();
   for (auto it = layers.rbegin(); it != layers.rend(); ++it) {
     if (!it->visible) {
       continue;
     }
-    if (ShapeAt(document, it->id, view, screen) != kNoId) {
+    if (ShapeAt(document, pose, it->id, view, screen) != kNoId) {
       return it->id;
     }
   }
   return kNoId;
 }
 
-QSet<Id> HitTest::PointsInside(const Document& document, Id layer,
+QSet<Id> HitTest::PointsInside(const Pose& pose, Id layer,
                                const ViewTransform& view,
                                const QPolygonF& screen_area) {
+  const QTransform to_screen = pose.LayerMatrix(layer) * view.ToScreenMatrix();
   QSet<Id> inside;
-  for (const Shape& shape : document.Shapes().All()) {
+  for (const Shape& shape : pose.shapes) {
     if (shape.layer != layer) {
       continue;
     }
     for (const Point& point : shape.points) {
       const bool is_inside =
-          screen_area.containsPoint(view.ToScreen(point.pos), Qt::OddEvenFill);
+          screen_area.containsPoint(to_screen.map(point.pos), Qt::OddEvenFill);
       if (is_inside) {
         inside.insert(point.id);
       }

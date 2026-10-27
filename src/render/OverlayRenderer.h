@@ -10,6 +10,7 @@ class QPainter;
 namespace snapper {
 
 class Document;
+struct Pose;
 class ViewTransform;
 
 // Draws the editing aids over the artwork, in screen coordinates.
@@ -23,8 +24,8 @@ class OverlayRenderer {
   // Outlines every shape using the style, so you see what editing it
   // changes.
   static void DrawStyleUsers(QPainter& painter, const Document& document,
-                             const ViewTransform& view, Id style,
-                             const QColor& color);
+                             const Pose& pose, const ViewTransform& view,
+                             Id style, const QColor& color);
 };
 
 }  // namespace snapper

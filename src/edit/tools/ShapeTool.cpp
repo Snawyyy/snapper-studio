@@ -71,8 +71,9 @@ void ShapeTool::Release(const ToolInput& input) {
   const QString text = kind_ == Kind::kRectangle
                            ? QStringLiteral("Draw Rectangle")
                            : QStringLiteral("Draw Ellipse");
-  Context().undo.Push(
-      MakeAddShape(Context().document, Build(rect, true), text));
+  Shape shape = Build(rect, true);
+  MoveIntoLayer(Context(), shape);
+  Context().undo.Push(MakeAddShape(Context().document, shape, text));
 }
 
 void ShapeTool::DrawOverlay(QPainter& painter,

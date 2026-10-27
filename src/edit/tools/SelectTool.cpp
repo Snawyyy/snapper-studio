@@ -8,12 +8,14 @@
 
 #include "app/Theme.h"
 #include "document/Document.h"
+#include "edit/AnimationEditor.h"
 #include "edit/HitTest.h"
 #include "edit/SelectionCommands.h"
 #include "edit/SelectionManager.h"
 #include "edit/ShapeCommands.h"
 #include "edit/UndoManager.h"
 #include "edit/tools/LayerCheck.h"
+#include "eval/FrameEvaluator.h"
 #include "render/ShapeGeometry.h"
 #include "render/ViewTransform.h"
 
@@ -126,7 +128,8 @@ void SelectTool::Release(const ToolInput& input) {
                                                            Qt::ControlModifier);
       if (is_layer_pick) {
         const Id layer =
-            HitTest::LayerAt(Context().document, *input.view, input.screen);
+            HitTest::LayerAt(Context().document, Context().frames.Current(),
+                             *input.view, input.screen);
         if (Context().selection.SetActiveLayer(layer)) {
           Context().hint(
               QStringLiteral("Editing %1")
@@ -149,10 +152,11 @@ void SelectTool::Release(const ToolInput& input) {
 }
 
 void SelectTool::DoubleClick(const ToolInput& input) {
-  const Id shape_id =
-      HitTest::ShapeAt(Context().document, Context().selection.ActiveLayer(),
-                       *input.view, input.screen);
-  const Shape* shape = Context().document.Shapes().Find(shape_id);
+  const Pose& pose = Context().frames.Current();
+  const Id shape_id = HitTest::ShapeAt(Context().document, pose,
+                                       Context().selection.ActiveLayer(),
+                                       *input.view, input.screen);
+  const Shape* shape = pose.FindShape(shape_id);
   if (shape != nullptr) {
     Select(PointsOf(*shape));
   }
@@ -199,14 +203,14 @@ bool SelectTool::KeyPress(int key, Qt::KeyboardModifiers modifiers) {
 }
 
 QSet<Id> SelectTool::TargetAt(const ToolInput& input) const {
-  const Document& document = Context().document;
+  const Pose& pose = Context().frames.Current();
   const Id layer = Context().selection.ActiveLayer();
-  const Id point = HitTest::PointAt(document, layer, *input.view, input.screen);
+  const Id point = HitTest::PointAt(pose, layer, *input.view, input.screen);
   if (point != kNoId) {
     return {point};
   }
-  const Shape* shape = document.Shapes().Find(
-      HitTest::ShapeAt(document, layer, *input.view, input.screen));
+  const Shape* shape = pose.FindShape(HitTest::ShapeAt(
+      Context().document, pose, layer, *input.view, input.screen));
   return shape == nullptr ? QSet<Id>() : PointsOf(*shape);
 }
 
@@ -220,9 +224,10 @@ void SelectTool::StartMove() {
     return;
   }
   move_from_.clear();
+  const Pose& pose = Context().frames.Current();
+  to_layer_ = pose.LayerMatrix(Context().selection.ActiveLayer()).inverted();
   for (const Id point : Context().selection.Points()) {
-    const std::optional<QPointF> pos =
-        Context().document.Shapes().PositionOf(point);
+    const std::optional<QPointF> pos = pose.PositionOf(point);
     if (pos.has_value()) {
       move_from_.push_back({.point = point, .pos = *pos});
     }
@@ -235,18 +240,20 @@ void SelectTool::MoveBy(const QPointF& canvas_delta) {
   if (move_from_.empty()) {
     return;
   }
+  // The same move on screen, in the layer's own space.
+  const QPointF delta = to_layer_.map(canvas_delta) - to_layer_.map(QPointF());
   std::vector<PointPosition> to = move_from_;
   for (PointPosition& position : to) {
-    position.pos += canvas_delta;
+    position.pos += delta;
   }
-  Context().undo.Push(std::make_unique<MovePointsCommand>(
-      Context().document, move_from_, std::move(to), move_tag_));
+  Context().undo.Push(
+      Context().animation.MovePoints(move_from_, std::move(to), move_tag_));
 }
 
 void SelectTool::FinishArea(const ToolInput& input) {
   const QSet<Id> inside = HitTest::PointsInside(
-      Context().document, Context().selection.ActiveLayer(), *input.view,
-      area_);
+      Context().frames.Current(), Context().selection.ActiveLayer(),
+      *input.view, area_);
   const QSet<Id>& selected = Context().selection.Points();
   if (press_modifiers_.testFlag(Qt::ShiftModifier)) {
     Select(QSet<Id>(selected).unite(inside));
@@ -278,9 +285,11 @@ void SelectTool::DrawPoints(QPainter& painter,
                             const ViewTransform& view) const {
   const Theme& theme = Context().theme;
   const SelectionManager& selection = Context().selection;
-  const QTransform to_screen = view.ToScreenMatrix();
+  const Pose& pose = Context().frames.Current();
+  const QTransform to_screen =
+      pose.LayerMatrix(selection.ActiveLayer()) * view.ToScreenMatrix();
   const double half = kPointSizePx / 2;
-  for (const Shape& shape : Context().document.Shapes().All()) {
+  for (const Shape& shape : pose.shapes) {
     if (shape.layer != selection.ActiveLayer()) {
       continue;
     }
@@ -293,7 +302,7 @@ void SelectTool::DrawPoints(QPainter& painter,
       painter.drawPath(to_screen.map(ShapeGeometry::CenterLine(shape)));
     }
     for (const Point& point : shape.points) {
-      const QPointF at = view.ToScreen(point.pos);
+      const QPointF at = to_screen.map(point.pos);
       const QRectF box(at - QPointF(half, half),
                        QSizeF(kPointSizePx, kPointSizePx));
       const bool is_selected = selection.IsSelected(point.id);

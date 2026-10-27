@@ -9,6 +9,7 @@ namespace snapper {
 Document::Document(QObject* parent) : QObject(parent) {}
 
 void Document::ResetToNew() {
+  channels_.Clear();
   shapes_.Clear();
   layers_.Clear();
   styles_.Clear();
@@ -22,6 +23,7 @@ void Document::ResetToNew() {
 }
 
 int Document::Replace(const DocumentContents& contents) {
+  channels_.Clear();
   shapes_.Clear();
   layers_.Clear();
   styles_.Clear();
@@ -56,6 +58,11 @@ int Document::Replace(const DocumentContents& contents) {
       ++skipped;
     }
   }
+  for (const Channel& channel : contents.channels) {
+    if (!channels_.Put(channel)) {
+      ++skipped;
+    }
+  }
   SetNextId(contents.next_id);
   Q_EMIT Reset();
   return skipped;
@@ -68,7 +75,18 @@ DocumentContents Document::Contents() const {
                             .shapes = shapes_.All(),
                             .styles = styles_.All(),
                             .brushes = brushes_.All(),
+                            .channels = {},
                             .images = {}};
+  // Deleting a layer or points leaves their channels behind, for undo.
+  for (const Channel& channel : channels_.All()) {
+    const bool is_point = channel.property == ChannelProperty::kPointPosition;
+    const bool is_alive = is_point
+                              ? shapes_.ShapeOfPoint(channel.target) != kNoId
+                              : layers_.Find(channel.target) != nullptr;
+    if (is_alive) {
+      contents.channels.push_back(channel);
+    }
+  }
   const auto add_picture = [&](const QString& name) {
     const auto found = images_.All().constFind(name);
     if (found != images_.All().cend()) {

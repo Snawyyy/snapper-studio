@@ -9,8 +9,10 @@
 
 #include "app/CommandRegistry.h"
 #include "document/Document.h"
+#include "edit/Playhead.h"
 #include "edit/SelectionManager.h"
 #include "edit/ToolManager.h"
+#include "eval/FrameEvaluator.h"
 #include "render/OverlayRenderer.h"
 
 namespace snapper {
@@ -25,10 +27,13 @@ constexpr int kViewSettleMs = 120;
 }  // namespace
 
 CanvasView::CanvasView(Document& document, SelectionManager& selection,
+                       FrameEvaluator& frames, const Playhead& playhead,
                        const Theme& theme, QWidget* parent)
     : QWidget(parent),
       document_(document),
       selection_(selection),
+      frames_(frames),
+      playhead_(playhead),
       theme_(theme) {
   setObjectName(QStringLiteral("canvas"));
   setFocusPolicy(Qt::StrongFocus);
@@ -41,10 +46,9 @@ CanvasView::CanvasView(Document& document, SelectionManager& selection,
   connect(&view_settle_, &QTimer::timeout, this, [this] { update(); });
 
   const auto art_changed = [this] { ArtChanged(); };
-  connect(&document_.Layers(), &LayerManager::ListChanged, this, art_changed);
-  connect(&document_.Layers(), &LayerManager::LayerChanged, this, art_changed);
-  connect(&document_.Shapes(), &ShapeManager::LayerContentChanged, this,
-          art_changed);
+  // Layers, shapes, channels and the frame all change the pose.
+  connect(&frames_, &FrameEvaluator::PoseChanged, this, art_changed);
+  connect(&playhead_, &Playhead::PlayingChanged, this, art_changed);
   connect(&document_.Styles(), &StyleManager::ListChanged, this, art_changed);
   connect(&document_.Styles(), &StyleManager::StyleChanged, this, art_changed);
   connect(&document_.Brushes(), &BrushManager::ListChanged, this, art_changed);
@@ -90,6 +94,17 @@ void CanvasView::RegisterCommands(CommandRegistry& commands) {
       .shortcut = QKeySequence(Qt::CTRL | Qt::Key_Minus),
       .run = [this] { ZoomAround(1 / kZoomStep); },
   });
+  commands.Add({
+      .id = QStringLiteral("view.onion-skin"),
+      .title = QStringLiteral("Onion Skin"),
+      .shortcut = QKeySequence(Qt::Key_O),
+      .run =
+          [this] {
+            OnionSettings onion = onion_;
+            onion.on = !onion.on;
+            SetOnion(onion);
+          },
+  });
 }
 
 void CanvasView::HighlightStyle(Id style) {
@@ -97,6 +112,12 @@ void CanvasView::HighlightStyle(Id style) {
     highlighted_style_ = style;
     update();
   }
+}
+
+void CanvasView::SetOnion(const OnionSettings& onion) {
+  onion_ = onion;
+  ArtChanged();
+  Q_EMIT OnionChanged();
 }
 
 void CanvasView::SetTools(ToolManager* tools) {
@@ -143,12 +164,22 @@ void CanvasView::paintEvent(QPaintEvent* /*event*/) {
   QPainter painter(this);
   painter.fillRect(rect(), theme_.canvas_surround);
   painter.setRenderHint(QPainter::Antialiasing);
-  art_.Draw(painter, document_, view_.ToScreenMatrix(), size(),
+  // Onion skin stays out of the way while playing.
+  std::vector<OnionFrame> onion;
+  if (!playhead_.IsPlaying()) {
+    for (const int frame :
+         OnionSkin::Frames(onion_, playhead_.Frame(), playhead_.LastFrame())) {
+      onion.push_back(
+          {.pose = &frames_.At(frame), .offset = frame - playhead_.Frame()});
+    }
+  }
+  const Pose& pose = frames_.Current();
+  art_.Draw(painter, document_, pose, onion, view_.ToScreenMatrix(), size(),
             devicePixelRatioF(), view_settle_.isActive());
   OverlayRenderer::DrawSurround(painter, document_, view_, rect(),
                                 theme_.canvas_surround);
-  OverlayRenderer::DrawStyleUsers(painter, document_, view_, highlighted_style_,
-                                  theme_.accent);
+  OverlayRenderer::DrawStyleUsers(painter, document_, pose, view_,
+                                  highlighted_style_, theme_.accent);
   if (tools_ != nullptr) {
     painter.setClipping(false);
     tools_->DrawOverlay(painter, view_);

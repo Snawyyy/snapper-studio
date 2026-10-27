@@ -4,12 +4,17 @@
 #include <QImage>
 #include <QTransform>
 
+#include <vector>
+
+#include "render/OnionSkin.h"
+
 class QPainter;
 class QSize;
 
 namespace snapper {
 
 class Document;
+struct Pose;
 
 // Keeps the page and artwork drawn for one view, so pen strokes, hovering
 // and overlays redraw without drawing every line again. When drawing the
@@ -27,12 +32,14 @@ class ArtCache {
   // `may_reuse`, slow art drawn for another view is moved to fit instead.
   // Returns true when what it drew was reused, so the caller can ask for a
   // sharp drawing later.
-  bool Draw(QPainter& painter, const Document& document,
-            const QTransform& matrix, const QSize& size, qreal pixel_ratio,
-            bool may_reuse);
+  // `onion` frames are drawn faded under the art.
+  bool Draw(QPainter& painter, const Document& document, const Pose& pose,
+            const std::vector<OnionFrame>& onion, const QTransform& matrix,
+            const QSize& size, qreal pixel_ratio, bool may_reuse);
 
  private:
-  void Render(const Document& document, const QTransform& matrix,
+  void Render(const Document& document, const Pose& pose,
+              const std::vector<OnionFrame>& onion, const QTransform& matrix,
               const QSize& size, qreal pixel_ratio);
 
   QImage image_;

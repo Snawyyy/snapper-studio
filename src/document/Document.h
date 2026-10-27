@@ -5,6 +5,7 @@
 #include <QSize>
 
 #include "document/BrushManager.h"
+#include "document/ChannelManager.h"
 #include "document/Ids.h"
 #include "document/ImageStore.h"
 #include "document/LayerManager.h"
@@ -30,6 +31,7 @@ struct DocumentContents {
   std::vector<Shape> shapes;
   std::vector<Style> styles;
   std::vector<Brush> brushes;
+  std::vector<Channel> channels;
   // Picture file bytes by name, for image layers and brushes.
   QHash<QString, QByteArray> images;
 };
@@ -53,7 +55,8 @@ class Document : public QObject {
   // Adds the brushes that come with the app, with their pictures. Returns
   // how many were added.
   int AddStandardBrushes();
-  // Only the pictures some layer or brush still uses are included.
+  // Only the pictures some layer or brush still uses are included, and
+  // only the channels of layers and points that still exist.
   DocumentContents Contents() const;
 
   // A fresh id, never handed out before in this project.
@@ -73,6 +76,8 @@ class Document : public QObject {
   const StyleManager& Styles() const { return styles_; }
   BrushManager& Brushes() { return brushes_; }
   const BrushManager& Brushes() const { return brushes_; }
+  ChannelManager& Channels() { return channels_; }
+  const ChannelManager& Channels() const { return channels_; }
   ImageStore& Images() { return images_; }
   const ImageStore& Images() const { return images_; }
 
@@ -88,6 +93,7 @@ class Document : public QObject {
   ShapeManager shapes_;
   StyleManager styles_;
   BrushManager brushes_;
+  ChannelManager channels_;
   ImageStore images_;
 };
 

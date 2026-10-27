@@ -9,6 +9,7 @@ target_sources(snapper_core PRIVATE
   app/ThemeManager.cpp app/ThemeManager.h
   app/ZipArchive.cpp app/ZipArchive.h
   document/BrushManager.cpp document/BrushManager.h
+  document/ChannelManager.cpp document/ChannelManager.h
   document/Document.cpp document/Document.h
   document/Ids.h
   document/ProjectJson.cpp document/ProjectJson.h
@@ -20,6 +21,10 @@ target_sources(snapper_core PRIVATE
   document/StandardBrushes.cpp document/StandardBrushes.h
   document/ShapeManager.cpp document/ShapeManager.h
   document/StyleManager.cpp document/StyleManager.h
+  edit/AnimationEditor.cpp edit/AnimationEditor.h
+  edit/KeyActions.cpp edit/KeyActions.h
+  edit/KeyCommands.cpp edit/KeyCommands.h
+  edit/Playhead.cpp edit/Playhead.h
   edit/SelectionManager.cpp edit/SelectionManager.h
   edit/Tool.h
   edit/ToolManager.cpp edit/ToolManager.h
@@ -40,7 +45,11 @@ target_sources(snapper_core PRIVATE
   edit/ShapeCommands.cpp edit/ShapeCommands.h
   edit/StyleCommands.cpp edit/StyleCommands.h
   edit/UndoManager.cpp edit/UndoManager.h
+  eval/Curves.cpp eval/Curves.h
+  eval/FrameEvaluator.cpp eval/FrameEvaluator.h
+  eval/Pose.h
   render/ArtCache.cpp render/ArtCache.h
+  render/OnionSkin.cpp render/OnionSkin.h
   render/BrushStamper.cpp render/BrushStamper.h
   render/OverlayRenderer.cpp render/OverlayRenderer.h
   render/Renderer.cpp render/Renderer.h

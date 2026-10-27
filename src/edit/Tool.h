@@ -10,7 +10,9 @@ class QPainter;
 
 namespace snapper {
 
+class AnimationEditor;
 class Document;
+class FrameEvaluator;
 class LookManager;
 struct Theme;
 class SelectionManager;
@@ -37,6 +39,10 @@ struct ToolContext {
   SelectionManager& selection;
   // The look new shapes get.
   LookManager& looks;
+  // The document as posed on the current frame, which tools show and hit.
+  FrameEvaluator& frames;
+  // Where moves go: the setup pose on frame 0, keys on other frames.
+  AnimationEditor& animation;
   const Theme& theme;
   // Shows a line in the status bar naming the next step or what went
   // wrong. An empty text clears it.

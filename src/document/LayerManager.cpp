@@ -4,6 +4,15 @@
 
 namespace snapper {
 
+QTransform LayerTransform::Matrix(const QPointF& origin) const {
+  QTransform matrix;
+  matrix.translate(position.x() + origin.x(), position.y() + origin.y());
+  matrix.rotateRadians(angle);
+  matrix.scale(scale.x(), scale.y());
+  matrix.translate(-origin.x(), -origin.y());
+  return matrix;
+}
+
 LayerManager::LayerManager(QObject* parent) : QObject(parent) {}
 
 bool LayerManager::Insert(const Layer& layer, int index) {
@@ -77,6 +86,18 @@ bool LayerManager::SetLocked(Id id, bool locked) {
     return false;
   }
   layer->locked = locked;
+  Q_EMIT LayerChanged(id);
+  return true;
+}
+
+bool LayerManager::SetTransform(Id id, const LayerTransform& transform,
+                                const QPointF& origin) {
+  Layer* layer = FindMutable(id);
+  if (layer == nullptr) {
+    return false;
+  }
+  layer->transform = transform;
+  layer->origin = origin;
   Q_EMIT LayerChanged(id);
   return true;
 }

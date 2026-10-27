@@ -4,6 +4,7 @@
 #include <QObject>
 #include <QSize>
 
+#include "document/BindingManager.h"
 #include "document/BrushManager.h"
 #include "document/ChannelManager.h"
 #include "document/Ids.h"
@@ -33,6 +34,7 @@ struct DocumentContents {
   std::vector<Style> styles;
   std::vector<Brush> brushes;
   std::vector<Bone> bones;
+  std::vector<LayerBinding> layer_bindings;
   std::vector<Channel> channels;
   // Picture file bytes by name, for image layers and brushes.
   QHash<QString, QByteArray> images;
@@ -80,6 +82,8 @@ class Document : public QObject {
   const BrushManager& Brushes() const { return brushes_; }
   SkeletonManager& Skeletons() { return skeletons_; }
   const SkeletonManager& Skeletons() const { return skeletons_; }
+  BindingManager& Bindings() { return bindings_; }
+  const BindingManager& Bindings() const { return bindings_; }
   ChannelManager& Channels() { return channels_; }
   const ChannelManager& Channels() const { return channels_; }
   ImageStore& Images() { return images_; }
@@ -87,6 +91,9 @@ class Document : public QObject {
 
   // True when the channel's target is still in the project.
   bool IsAlive(const Channel& channel) const;
+  // True when the layer can follow the bone: both exist and the bone is
+  // on the nearest bone layer the layer sits in.
+  bool CanBind(Id layer, Id bone) const;
 
  Q_SIGNALS:
   void CanvasChanged();
@@ -101,6 +108,7 @@ class Document : public QObject {
   StyleManager styles_;
   BrushManager brushes_;
   SkeletonManager skeletons_;
+  BindingManager bindings_;
   ChannelManager channels_;
   ImageStore images_;
 };

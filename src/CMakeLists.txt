@@ -8,6 +8,7 @@ target_sources(snapper_core PRIVATE
   app/StudyManager.cpp app/StudyManager.h
   app/ThemeManager.cpp app/ThemeManager.h
   app/ZipArchive.cpp app/ZipArchive.h
+  document/BindingManager.cpp document/BindingManager.h
   document/BrushManager.cpp document/BrushManager.h
   document/ChannelJson.cpp document/ChannelJson.h
   document/ChannelManager.cpp document/ChannelManager.h

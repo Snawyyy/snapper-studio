@@ -10,6 +10,7 @@ Document::Document(QObject* parent) : QObject(parent) {}
 
 void Document::ResetToNew() {
   channels_.Clear();
+  bindings_.Clear();
   skeletons_.Clear();
   shapes_.Clear();
   layers_.Clear();
@@ -25,6 +26,7 @@ void Document::ResetToNew() {
 
 int Document::Replace(const DocumentContents& contents) {
   channels_.Clear();
+  bindings_.Clear();
   skeletons_.Clear();
   shapes_.Clear();
   layers_.Clear();
@@ -76,6 +78,13 @@ int Document::Replace(const DocumentContents& contents) {
       ++skipped;
     }
   }
+  for (const LayerBinding& binding : contents.layer_bindings) {
+    const bool is_bound = CanBind(binding.layer, binding.bone) &&
+                          bindings_.BindLayer(binding.layer, binding.bone);
+    if (!is_bound) {
+      ++skipped;
+    }
+  }
   for (const Channel& channel : contents.channels) {
     if (!channels_.Put(channel)) {
       ++skipped;
@@ -94,6 +103,7 @@ DocumentContents Document::Contents() const {
                             .styles = styles_.All(),
                             .brushes = brushes_.All(),
                             .bones = {},
+                            .layer_bindings = {},
                             .channels = {},
                             .images = {}};
   // Deleting a layer leaves its bones behind, and deleting a layer, bones
@@ -101,6 +111,11 @@ DocumentContents Document::Contents() const {
   for (const Bone& bone : skeletons_.All()) {
     if (layers_.Find(bone.layer) != nullptr) {
       contents.bones.push_back(bone);
+    }
+  }
+  for (const LayerBinding& binding : bindings_.LayerBindings()) {
+    if (CanBind(binding.layer, binding.bone)) {
+      contents.layer_bindings.push_back(binding);
     }
   }
   for (const Channel& channel : channels_.All()) {
@@ -152,6 +167,14 @@ bool Document::IsAlive(const Channel& channel) const {
     return bone != nullptr && layers_.Find(bone->layer) != nullptr;
   }
   return layers_.Find(channel.target) != nullptr;
+}
+
+bool Document::CanBind(Id layer, Id bone) const {
+  const Layer* found = layers_.Find(layer);
+  const Bone* found_bone = skeletons_.Find(bone);
+  const bool can_bind = found != nullptr && found_bone != nullptr &&
+                        layers_.BoneLayerOf(found->parent) == found_bone->layer;
+  return can_bind;
 }
 
 void Document::SetNextId(Id next) { next_id_ = std::max(next_id_, next); }

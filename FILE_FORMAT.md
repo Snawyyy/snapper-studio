@@ -26,7 +26,7 @@ that is unique in the project. Links between objects use ids.
 ```json
 {
   "format": "snapper",
-  "version": 3,
+  "version": 4,
   "app_version": "0.1.0",
   "canvas": { "width": 1920, "height": 1080, "fps": 24,
               "frames": 240, "background": "#FFFFFF" },
@@ -47,10 +47,9 @@ that is unique in the project. Links between objects use ids.
                   "width": 1.0 } ],
   "bones":    [ { "id": 300, "layer": 10, "parent": 0, "name": "upper_arm",
                   "x": 0.0, "y": 0.0, "angle": 1.57, "length": 80.0,
-                  "strength": 40.0 } ],
-  "bindings": [ { "kind": "layer", "layer": 11, "bone": 300 },
-                { "kind": "points", "points": [201, 202], "bone": 301 } ],
-  "channels": [ { "target": 300, "property": "angle",
+                  "scale": 1.0, "pinned": false } ],
+  "bindings": [ { "kind": "layer", "layer": 11, "bone": 300 } ],
+  "channels": [ { "target": 300, "property": "bone_angle",
                   "keys": [ { "t": 12, "v": 0.8, "curve": "smooth" } ] },
                 { "target": 201, "property": "point",
                   "keys": [ { "t": 6, "x": 12.0, "y": 9.5,
@@ -83,11 +82,22 @@ A layer that has been moved, turned or scaled has an `origin` [x, y],
 the spot it turns and scales round in its own space, and a `transform`
 { `x`, `y`, `angle`, `sx`, `sy` } for its setup pose on frame 0.
 
+A bone layer holds the layers whose `parent` it is. Its bones each name
+the bone `layer` they belong to and their `parent` bone, 0 for none, and
+come after their parent. A bone's `x` and `y` are where its base sits in
+its parent's space: the parent's base at 0 with the parent running along
+x, its `x` stretched with the parent. With no parent they are in the
+bone layer's space. `angle` is from the parent's direction, `length` in
+pixels, `scale` stretches it along its length (left out at 1), and
+`pinned` stops IK at it (left out when false). A `layer` binding makes a
+whole layer follow a bone of the bone layer it sits in.
+
 A channel animates one `property` of its `target`: `point` (a point's
-position), or a layer's `position`, `angle` or `scale`. There is at most
+position), a layer's `position`, `angle` or `scale`, or a bone's
+`bone_position`, `bone_angle` or `bone_scale`. There is at most
 one per target and property. Frame 0 is the setup pose, taken from the
-target itself, so keys sit on frame `t` 1 and later. Angles have one
-value `v`, the others `x` and `y`. A key's `curve` shapes the span after
+target itself, so keys sit on frame `t` 1 and later. Angles and bone
+scale have one value `v`, the others `x` and `y`. A key's `curve` shapes the span after
 it, up to the next key: `smooth`, `linear`, `step`, `ease_in`,
 `ease_out`, `ease_in_out`, `noisy`, `cycle`, `bounce` or `elastic`. For
 `noisy`, `param` is how far the value shakes; for `cycle`, how many
@@ -102,7 +112,8 @@ means top level.
 - **Versioned.** `version` goes up whenever the format changes.
   Version 2 added styles and brushes: a version 1 project opens with the
   default style and the standard brushes added. Version 3 added
-  channels and layer transforms, which older projects simply don't have. The app
+  channels and layer transforms, and version 4 bone layers, bones and
+  bindings, which older projects simply don't have. The app
   opens every older version by upgrading it step by step (1 to 2 to 3),
   one small function per step. A newer version than the app knows opens
   read-only, with a message.

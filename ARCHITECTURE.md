@@ -29,11 +29,11 @@ edits data directly: every change is a command that goes through undo.
 |---|---|
 | `StyleManager` | Styles: fill, line color, width and brush, each set or left to the shape. Resolves a shape's look from its own look and its two styles. |
 | `BrushManager` | Brushes and their settings (spacing, align to curve, turn, gap and size jitter, boil interval). Their pictures live in the image store with the imported pictures. |
-| `LayerManager` | The layer tree: vector, image, group, bone and switch layers, plus order, visibility and lock. |
+| `LayerManager` | The layer tree: vector, image and bone layers (group and switch layers join later), plus order, visibility and lock. A bone layer holds the layers above it in the list as one block, so moving, hiding or deleting it takes them along. |
 | `ShapeManager` | Vector layer contents: points, curves, shapes, and each shape's style ids. |
-| `SkeletonManager` | Bones of each bone layer: rest pose (frame 0), parent, length, strength (region size), constraints. |
-| `BindingManager` | What follows what: layer to bone, points to bones, region and flexi weights. |
-| `ChannelManager` | Every animated value is a channel with keys, one per target and property. Each key has a frame, a value and a curve. Frame 0 is the setup pose, taken from the target itself. Point positions and layer transforms are channels now; bone angles and switch choices join later. |
+| `SkeletonManager` | Bones of every bone layer in one list, parents first: name, parent, length, pin, and the setup pose (frame 0): position in the parent bone's space, angle from the parent, and a stretch along the bone. Strength regions join in M5. |
+| `BindingManager` | What follows what: whole layers following one bone now, points to bones with region and flexi weights later. A layer follows only bones of the bone layer it sits in. |
+| `ChannelManager` | Every animated value is a channel with keys, one per target and property. Each key has a frame, a value and a curve. Frame 0 is the setup pose, taken from the target itself. Point positions, layer transforms and bone position, angle and stretch are channels now; switch choices join later. |
 | `ActionManager` | Smart bone actions: a driving bone, an angle range, and their own channels holding point offsets from the rest pose. |
 
 These eight together are the `Document`. The `Document` holds them,
@@ -44,17 +44,25 @@ saves and loads them, and is the only thing commands may change.
 in fixed order:
 
 1. Read every channel at the time (`ChannelManager`).
-2. Pose the bones, parents first, with IK where set (`SkeletonManager`).
+2. Pose the bones, parents first (`SkeletonManager`). A parent's stretch
+   moves its children's bases along with its tip.
 3. Add smart bone actions: each driving bone's angle picks a spot in its
    action, and the point offsets from all actions add up.
-4. Deform points by their bindings (`BindingManager`).
+4. Move layers by the bones they follow, from where the bone was in the
+   setup pose to where it is now, and deform points by their bindings
+   (`BindingManager`). Each layer then sits in its parent's space.
 5. Pick the shown child of each switch layer.
 
 The result is a `Pose`: every shape with its points where they sit on
-that frame, in layer space, and each layer's transform. Drawing, hit
+that frame, in layer space, each layer's transform, and every bone. Drawing, hit
 tests and tools all read the pose for the playhead's frame, never the
 setup positions directly. Poses are kept by frame and dropped when the
 document changes. `Curves` holds the math of each key curve.
+
+IK is not part of the frame: Manipulate Bones runs `IkSolver` while you
+drag and stores the angles it finds as keys, Moho style, so playback
+never solves anything. On the setup frame the same drag is a trial pose
+the evaluator shows but never saves, dropped on release.
 
 ### Drawing
 | Manager | Job |
@@ -69,13 +77,14 @@ document changes. `Curves` holds the math of each key curve.
 | Manager | Job |
 |---|---|
 | `UndoManager` | Wraps `QUndoStack`. Every edit is a command with do and undo. Selection changes are commands too. History is saved with the project. |
-| `SelectionManager` | What's selected (ids), per kind: points, shapes, bones, layers, keys. |
+| `SelectionManager` | What's selected (ids): the active layer, points on it, and bones of the bone layer it is or sits in. Keys are selected in `KeyActions`. |
 | `Playhead` | The current frame, stepping, jumping to keys and playback, which loops over frames 1 to the last and stops back where it started. |
-| `AnimationEditor` | Turns a move into a change, Moho style: on frame 0 it edits the setup pose, on any other frame it sets keys there, only for what changed. |
+| `AnimationEditor` | Turns a move into a change, Moho style: on frame 0 it edits the setup pose, on any other frame it sets keys there, only for what changed. Points, layers and bones all go through it. |
 | `KeyActions` | Everything done to keys on the active layer, and which are selected: add (K), delete (Shift+K), retime, copy and set curves. The Timeline panel and the command list share it. |
-| `ToolManager` | The active tool, hold-to-switch, and handing pen events to the tool. Each tool is a class implementing a small `Tool` interface. |
+| `KeyRows` | Which timeline rows the active layer shows and which channels each covers. Bone layers swap the points row for bone move, rotate and scale rows, showing the selected bones, or all of them when none are. |
+| `ToolManager` | The active tool, hold-to-switch, and handing pen events to the tool. Each tool is a class implementing a small `Tool` interface. Two tools may share a key, Moho style: T is Transform Bone on a bone layer and Transform Layer elsewhere. |
 | `LookManager` | The look new shapes get, and look changes to the selected shapes (any shape with a selected point). With nothing selected, changes go to new shapes. |
-| `LayerActions`, `StyleActions`, `BrushActions` | Whole-object edits the panels and commands share: add, delete, rename, edit, import. Each builds commands for undo. |
+| `LayerActions`, `BoneActions`, `StyleActions`, `BrushActions` | Whole-object edits the panels and commands share: add, delete, rename, restack, pin, edit, import. Each builds commands for undo. |
 | `CommandRegistry` | Every user action by name, with its shortcut. It feeds menus, the Ctrl+K search and rebinding. |
 
 ### Around the app
@@ -114,7 +123,7 @@ on Qt Multimedia's own thread.
 ```
 src/
   document/   the eight data managers, Document
-  eval/       FrameEvaluator, curve math, IK
+  eval/       FrameEvaluator, Pose, curve math, IkSolver
   render/     Renderer, BrushStamper, OverlayRenderer
   edit/       UndoManager, commands, SelectionManager, ToolManager, tools/
   app/        ProjectIo, ExportManager, AudioManager, ThemeManager,

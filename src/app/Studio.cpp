@@ -12,6 +12,7 @@
 #include "app/ThemeManager.h"
 #include "document/Document.h"
 #include "edit/AnimationEditor.h"
+#include "edit/BoneActions.h"
 #include "edit/BrushActions.h"
 #include "edit/KeyActions.h"
 #include "edit/LayerActions.h"
@@ -32,6 +33,7 @@
 #include "edit/tools/TransformBoneTool.h"
 #include "edit/tools/TransformLayerTool.h"
 #include "eval/FrameEvaluator.h"
+#include "ui/BoneOptions.h"
 #include "ui/BrushesPanel.h"
 #include "ui/CanvasView.h"
 #include "ui/ColorPopover.h"
@@ -105,6 +107,10 @@ Studio::Studio()
   layer_actions_ = std::make_unique<LayerActions>(
       *document_, *selection_, *undo_,
       [this](const QString& text) { window_->ShowHint(text); });
+  bone_actions_ = std::make_unique<BoneActions>(
+      *document_, *selection_, *undo_,
+      [this](const QString& text) { window_->ShowHint(text); });
+  bone_actions_->RegisterCommands(*commands_);
   CreateTools();
   CreatePanels();
   CreateTimeline();
@@ -198,6 +204,12 @@ void Studio::CreateTools() {
   tools_->Add(std::make_unique<TransformBoneTool>(context));
   tools_->Add(std::make_unique<ManipulateBonesTool>(context));
   tools_->Add(std::make_unique<BindLayerTool>(context));
+  // Each bone tool shows the selected bone's name and pin.
+  for (const char* id :
+       {"add-bone", "select-bone", "transform-bone", "manipulate-bones"}) {
+    options->AddPage(QString::fromLatin1(id),
+                     new BoneOptions(*document_, *selection_, *bone_actions_));
+  }
   tools_->SetBoneLayerCheck([this] {
     const Layer* layer = document_->Layers().Find(selection_->ActiveLayer());
     return layer != nullptr && layer->type == LayerType::kBone;

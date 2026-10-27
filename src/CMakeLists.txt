@@ -26,6 +26,7 @@ target_sources(snapper_core PRIVATE
   document/SkeletonManager.cpp document/SkeletonManager.h
   document/StyleManager.cpp document/StyleManager.h
   edit/AnimationEditor.cpp edit/AnimationEditor.h
+  edit/BoneActions.cpp edit/BoneActions.h
   edit/BoneCommands.cpp edit/BoneCommands.h
   edit/KeyActions.cpp edit/KeyActions.h
   edit/KeyCommands.cpp edit/KeyCommands.h
@@ -68,6 +69,7 @@ target_sources(snapper_core PRIVATE
   render/Renderer.cpp render/Renderer.h
   render/ShapeGeometry.cpp render/ShapeGeometry.h
   render/ViewTransform.cpp render/ViewTransform.h
+  ui/BoneOptions.cpp ui/BoneOptions.h
   ui/BrushesPanel.cpp ui/BrushesPanel.h
   ui/BrushPreview.cpp ui/BrushPreview.h
   ui/CanvasView.cpp ui/CanvasView.h

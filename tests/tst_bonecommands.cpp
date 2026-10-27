@@ -5,6 +5,7 @@
 
 #include "document/Document.h"
 #include "edit/AnimationEditor.h"
+#include "edit/BoneActions.h"
 #include "edit/BoneCommands.h"
 #include "edit/Playhead.h"
 #include "edit/SelectionManager.h"
@@ -115,6 +116,25 @@ class BoneCommandsTest : public QObject {
     QCOMPARE(f.document.Bindings().BoneOfLayer(f.drawing), f.chain[0]);
     f.undo.Undo();
     QCOMPARE(f.document.Bindings().BoneOfLayer(f.drawing), kNoId);
+  }
+
+  void RenamingAndPinningUndo() {
+    Fixture f;
+    snapper::BoneActions actions(f.document, f.selection, f.undo,
+                                 [](const QString&) {});
+    actions.RenameBone(f.chain[0], QStringLiteral("  spine "));
+    QCOMPARE(f.document.Skeletons().Find(f.chain[0])->name,
+             QStringLiteral("spine"));
+    f.selection.SetActiveLayer(f.bones);
+    f.selection.SetBones({f.chain[0], f.chain[1]});
+    actions.TogglePinSelected();
+    QVERIFY(f.document.Skeletons().Find(f.chain[1])->pinned);
+    actions.TogglePinSelected();
+    QVERIFY(!f.document.Skeletons().Find(f.chain[0])->pinned);
+    f.undo.Undo();
+    f.undo.Undo();
+    f.undo.Undo();
+    QVERIFY(f.document.Skeletons().Find(f.chain[0])->name.isEmpty());
   }
 
   void BoneSelectionStaysOnItsBoneLayer() {

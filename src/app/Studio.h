@@ -16,6 +16,7 @@ class AnimationEditor;
 class Document;
 class FrameEvaluator;
 class KeyActions;
+class BoneActions;
 class LayerActions;
 class LookManager;
 class MainWindow;
@@ -75,6 +76,7 @@ class Studio {
   std::unique_ptr<LookManager> looks_;
   std::unique_ptr<ToolManager> tools_;
   std::unique_ptr<LayerActions> layer_actions_;
+  std::unique_ptr<BoneActions> bone_actions_;
   std::unique_ptr<StyleActions> style_actions_;
   std::unique_ptr<BrushActions> brush_actions_;
   std::unique_ptr<KeyActions> key_actions_;

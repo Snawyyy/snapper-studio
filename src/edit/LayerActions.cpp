@@ -228,10 +228,10 @@ void LayerActions::RegisterCommands(CommandRegistry& commands) {
 }
 
 QString LayerActions::UnusedName(const QString& base) const {
-  // Of count + 1 numbers in a row, at least one is free.
+  // The first free number. Of count + 1 numbers, at least one is free.
   const std::vector<Layer>& layers = document_.Layers().All();
   const int count = static_cast<int>(layers.size());
-  for (int n = count + 1; n <= 2 * count + 1; ++n) {
+  for (int n = 1; n <= count + 1; ++n) {
     const QString name = QStringLiteral("%1 %2").arg(base).arg(n);
     const bool is_taken = std::ranges::any_of(
         layers, [&](const Layer& layer) { return layer.name == name; });

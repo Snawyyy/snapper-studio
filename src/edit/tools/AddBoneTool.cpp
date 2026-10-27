@@ -139,8 +139,8 @@ void AddBoneTool::DrawOverlay(QPainter& painter,
 QString AddBoneTool::UnusedName() const {
   const SkeletonManager& skeletons = Context().document.Skeletons();
   const int count = skeletons.Count();
-  // Of count + 1 numbers in a row, at least one is free.
-  for (int n = count + 1; n <= 2 * count + 1; ++n) {
+  // The first free number. Of count + 1 numbers, at least one is free.
+  for (int n = 1; n <= count + 1; ++n) {
     const QString name = QStringLiteral("Bone %1").arg(n);
     const bool is_taken = std::ranges::any_of(
         skeletons.All(), [&](const Bone& bone) { return bone.name == name; });
